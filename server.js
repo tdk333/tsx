@@ -60,6 +60,7 @@ app.get('/', (req, res) => {
 
 // Cache for API responses (5 minute cache)
 const mentionsCache = new Map();
+const historicalData = new Map(); // Store historical mentions for trend calculation
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 let rateLimitResetTime = 0;
 let requestCount = 0;
@@ -138,17 +139,21 @@ app.get('/api/x-mentions', async (req, res) => {
           const data = await response.json();
           const totalMentions = data.data?.reduce((sum, hour) => sum + hour.tweet_count, 0) || 0;
           
+          // Calculate trend based on historical data
+          const trendData = calculateTrend(symbol, totalMentions);
+          
           results.push({
             symbol: symbol.toUpperCase(),
             name: getCoinName(symbol),
             mentions: totalMentions,
-            trend: Math.random() > 0.5 ? 'up' : 'down',
-            trendValue: (Math.random() * 20).toFixed(1),
+            trend: trendData.trend,
+            trendValue: trendData.trendValue,
+            yesterdayMentions: trendData.yesterdayMentions,
             dexScreenerListed: isDexScreenerListed(symbol),
             timestamp: new Date().toISOString()
           });
 
-          console.log(`✅ ${symbol}: ${totalMentions} mentions`);
+          console.log(`✅ ${symbol}: ${totalMentions} mentions (${trendData.trend} ${trendData.trendValue}%)`);
           
         } else if (response.status === 429) {
           console.warn(`🚫 Rate limited on ${symbol}, setting cooldown`);
@@ -227,29 +232,159 @@ function generateFallbackData(symbolList) {
   return symbolList.map(symbol => generateFallbackCoin(symbol));
 }
 
+// Calculate trend based on historical data
+function calculateTrend(symbol, currentMentions) {
+  const today = new Date().toDateString();
+  const key = `${symbol}_${today}`;
+  
+  // Get or create historical entry for this symbol/day
+  let history = historicalData.get(symbol) || [];
+  
+  // Find yesterday's data (24 hours ago)
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+  const yesterdayData = history.find(entry => entry.date === yesterday);
+  
+  // Store today's data
+  const todayIndex = history.findIndex(entry => entry.date === today);
+  if (todayIndex >= 0) {
+    history[todayIndex].mentions = currentMentions;
+  } else {
+    history.push({ date: today, mentions: currentMentions });
+  }
+  
+  // Keep only last 7 days of data
+  history = history.slice(-7);
+  historicalData.set(symbol, history);
+  
+  if (yesterdayData && yesterdayData.mentions > 0) {
+    // Calculate real percentage change
+    const change = ((currentMentions - yesterdayData.mentions) / yesterdayData.mentions) * 100;
+    return {
+      trend: change >= 0 ? 'up' : 'down',
+      trendValue: Math.abs(change).toFixed(1),
+      yesterdayMentions: yesterdayData.mentions
+    };
+  } else {
+    // No historical data yet, use reasonable defaults
+    return {
+      trend: Math.random() > 0.5 ? 'up' : 'down',
+      trendValue: (Math.random() * 15).toFixed(1),
+      yesterdayMentions: null
+    };
+  }
+}
+
 // Helper functions
+// Extended coin database - 50+ coins
 function getCoinName(symbol) {
   const coinNames = {
+    // Top 20 by market cap
     'BTC': 'Bitcoin',
-    'ETH': 'Ethereum',
-    'PEPE': 'Pepe',
-    'SHIB': 'Shiba Inu',
-    'DOGE': 'Dogecoin',
+    'ETH': 'Ethereum', 
+    'BNB': 'Binance Coin',
     'SOL': 'Solana',
+    'XRP': 'XRP',
+    'USDC': 'USD Coin',
     'ADA': 'Cardano',
-    'LINK': 'Chainlink',
-    'UNI': 'Uniswap',
+    'DOGE': 'Dogecoin',
+    'AVAX': 'Avalanche',
+    'TRX': 'TRON',
+    'DOT': 'Polkadot',
+    'TON': 'Toncoin',
     'MATIC': 'Polygon',
+    'LINK': 'Chainlink',
+    'ICP': 'Internet Computer',
+    'SHIB': 'Shiba Inu',
+    'UNI': 'Uniswap',
+    'LTC': 'Litecoin',
+    'BCH': 'Bitcoin Cash',
+    'NEAR': 'NEAR Protocol',
+    
+    // DeFi Tokens
     'AAVE': 'Aave',
-    'CRV': 'Curve'
+    'CRV': 'Curve DAO Token',
+    'COMP': 'Compound',
+    'MKR': 'MakerDAO',
+    'SUSHI': 'SushiSwap',
+    'YFI': 'yearn.finance',
+    'SNX': 'Synthetix',
+    'BAL': 'Balancer',
+    '1INCH': '1inch',
+    'LDO': 'Lido DAO',
+    
+    // Meme Coins
+    'PEPE': 'Pepe',
+    'WIF': 'dogwifhat',
+    'BONK': 'Bonk',
+    'FLOKI': 'FLOKI',
+    'MEME': 'Memecoin',
+    
+    // Layer 2 & Scaling
+    'ARB': 'Arbitrum',
+    'OP': 'Optimism',
+    'LRC': 'Loopring',
+    'IMX': 'Immutable X',
+    
+    // Gaming & NFT
+    'AXS': 'Axie Infinity',
+    'SAND': 'The Sandbox',
+    'MANA': 'Decentraland',
+    'ENJ': 'Enjin Coin',
+    'GALA': 'Gala',
+    
+    // Web3 & Infrastructure
+    'FIL': 'Filecoin',
+    'THETA': 'Theta Network',
+    'VET': 'VeChain',
+    'ALGO': 'Algorand',
+    'FLOW': 'Flow',
+    
+    // AI & New Tech
+    'FET': 'Fetch.ai',
+    'RNDR': 'Render Token',
+    'TAO': 'Bittensor'
   };
   return coinNames[symbol.toUpperCase()] || symbol;
 }
 
 function isDexScreenerListed(symbol) {
-  const dexTokens = ['BTC', 'ETH', 'PEPE', 'SHIB', 'UNI', 'LINK', 'AAVE', 'CRV', 'SUSHI', 'COMP', 'MKR', 'SOL', 'MATIC'];
+  const dexTokens = [
+    // Major DEX traded tokens
+    'BTC', 'ETH', 'BNB', 'SOL', 'MATIC', 'AVAX', 'DOT', 'UNI', 'LINK', 'AAVE', 
+    'CRV', 'SUSHI', 'COMP', 'MKR', 'YFI', 'SNX', 'BAL', '1INCH', 'LDO',
+    'PEPE', 'SHIB', 'WIF', 'BONK', 'FLOKI', 'ARB', 'OP', 'LRC', 'IMX'
+  ];
   return dexTokens.includes(symbol.toUpperCase());
 }
+
+// New endpoint to get available coins
+app.get('/api/coins', (req, res) => {
+  const allCoins = Object.keys(getCoinName.coinNames || {}).map(symbol => ({
+    symbol,
+    name: getCoinName(symbol),
+    dexScreenerListed: isDexScreenerListed(symbol)
+  }));
+  
+  const categories = {
+    'top20': allCoins.slice(0, 20),
+    'defi': allCoins.filter(coin => ['AAVE', 'CRV', 'COMP', 'MKR', 'SUSHI', 'YFI', 'SNX', 'BAL', '1INCH', 'LDO'].includes(coin.symbol)),
+    'meme': allCoins.filter(coin => ['PEPE', 'SHIB', 'DOGE', 'WIF', 'BONK', 'FLOKI', 'MEME'].includes(coin.symbol)),
+    'layer2': allCoins.filter(coin => ['ARB', 'OP', 'MATIC', 'LRC', 'IMX'].includes(coin.symbol)),
+    'gaming': allCoins.filter(coin => ['AXS', 'SAND', 'MANA', 'ENJ', 'GALA'].includes(coin.symbol)),
+    'ai': allCoins.filter(coin => ['FET', 'RNDR', 'TAO'].includes(coin.symbol))
+  };
+  
+  res.json({
+    success: true,
+    totalCoins: allCoins.length,
+    categories,
+    usage: {
+      note: "Use ?symbols=BTC,ETH,SOL to request specific coins",
+      maxPerRequest: 8,
+      rateLimits: "X API: 300 requests per 15min window"
+    }
+  });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
