@@ -688,6 +688,18 @@
             color: #f85149;
         }
 
+        .data-source {
+            font-size: 0.6rem;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-family: 'SF Mono', monospace;
+            margin-left: 5px;
+            background: rgba(88, 166, 255, 0.2);
+            color: #58a6ff;
+        }
+
+        /* Fallback data styling removed - no more fake data! */
+
         .trending-header {
             display: flex;
             justify-content: space-between;
@@ -2103,7 +2115,11 @@
                 
                 const response = await fetch(`${API_BASE_URL}/api/x-mentions?symbols=${symbols}`);
                 
-                if (!response.ok) {
+                if (response.status === 429) {
+                    const result = await response.json();
+                    displayRateLimitMessage(result);
+                    return;
+                } else if (!response.ok) {
                     throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
                 }
                 
@@ -2113,6 +2129,8 @@
                     xMentionsData = result.data;
                     updateXMentionsDisplay();
                     console.log(`✅ Loaded ${xMentionsData.length} real X.com mentions from backend`);
+                } else if (result.rateLimited) {
+                    displayRateLimitMessage(result);
                 } else {
                     throw new Error('Invalid API response format');
                 }
@@ -2123,13 +2141,21 @@
                 if (error.message.includes('Failed to fetch')) {
                     displayBackendConnectionError();
                 } else {
-                    // Fallback to mock data
-                    const mockData = generateMockXMentions();
-                    xMentionsData = currentMentionType === 'dexscreener' 
-                        ? mockData.filter(item => item.dexScreenerListed)
-                        : mockData;
-                    updateXMentionsDisplay();
-                    console.log('📊 Using fallback data due to API error');
+                    // Show error message instead of fake data
+                    const mentionsList = document.getElementById('xMentionsList');
+                    mentionsList.innerHTML = `
+                        <div class="no-data" style="padding: 15px; text-align: center;">
+                            <div style="margin-bottom: 10px;">❌ <strong>API Error</strong></div>
+                            <div style="font-size: 0.7rem; color: #7d8590; margin-bottom: 10px;">
+                                ${error.message}
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <button onclick="fetchXMentions()" style="background: #58a6ff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    `;
                 }
             }
         }
@@ -2339,6 +2365,60 @@ The X API itself is free, but needs backend!`);
             console.log('📊 Now showing demo data');
         }
 
+        let rateLimitCountdownInterval = null;
+
+        function displayRateLimitMessage(rateLimitInfo) {
+            const mentionsList = document.getElementById('xMentionsList');
+            const resetTime = new Date(rateLimitInfo.resetTime);
+            
+            // Clear any existing countdown
+            if (rateLimitCountdownInterval) {
+                clearInterval(rateLimitCountdownInterval);
+            }
+            
+            // Initial display
+            updateRateLimitDisplay(rateLimitInfo.resetInSeconds);
+            
+            // Update countdown every second
+            let remainingSeconds = rateLimitInfo.resetInSeconds;
+            rateLimitCountdownInterval = setInterval(() => {
+                remainingSeconds--;
+                if (remainingSeconds <= 0) {
+                    clearInterval(rateLimitCountdownInterval);
+                    // Try to refresh data automatically
+                    fetchXMentions();
+                    return;
+                }
+                updateRateLimitDisplay(remainingSeconds);
+            }, 1000);
+
+            function updateRateLimitDisplay(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                const timeString = `${minutes}:${secs.toString().padStart(2, '0')}`;
+                
+                mentionsList.innerHTML = `
+                    <div class="no-data" style="padding: 20px; text-align: center;">
+                        <div style="margin-bottom: 15px;">⏰ <strong>Rate Limited</strong></div>
+                        <div style="font-size: 0.8rem; color: #7d8590; margin-bottom: 10px;">
+                            X.com API limit exceeded (300 requests per 15 minutes)
+                        </div>
+                        <div style="font-size: 1.2rem; color: #58a6ff; margin-bottom: 15px; font-family: monospace;">
+                            <strong>${timeString}</strong>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #c9d1d9; margin-bottom: 15px;">
+                            Please check back when the timer reaches 0:00
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <button onclick="fetchXMentions()" style="background: #58a6ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                                Check Now
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         function showXApiInstructions() {
             alert(`🔑 X API FREE SETUP (2 minutes):
 
@@ -2395,17 +2475,22 @@ The setup is free and takes 2 minutes!`);
                 return;
             }
 
-            const mentionsHtml = xMentionsData.map(mention => `
+            const mentionsHtml = xMentionsData.map(mention => {
+                const dataSource = mention.cached ? '📦 Cached' : '🔴 Live';
+                
+                return `
                 <div class="mention-item" onclick="addTokenChart('${mention.symbol}', '${mention.name}', 'N/A', '0%')">
                     <div class="mention-header">
                         <span class="mention-coin">${mention.symbol}</span>
                         <span class="mention-count">${mention.mentions} mentions</span>
+                        <span class="data-source">${dataSource}</span>
                     </div>
                     <div class="mention-trend ${mention.trend}">
                         ${mention.trend === 'up' ? '↗' : '↘'} ${mention.trendValue}% (24h)
+                        ${mention.yesterdayMentions ? ` (vs ${mention.yesterdayMentions})` : ''}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
             mentionsList.innerHTML = mentionsHtml;
         }

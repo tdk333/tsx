@@ -100,14 +100,17 @@ app.get('/api/x-mentions', async (req, res) => {
     // Check rate limiting
     const now = Date.now();
     if (now < rateLimitResetTime) {
-      console.warn('🚫 Rate limited, serving fallback data');
-      const fallbackData = generateFallbackData(symbolList);
-      return res.json({
-        success: true,
-        data: fallbackData,
-        totalSymbols: fallbackData.length,
+      const resetTimeMinutes = Math.ceil((rateLimitResetTime - now) / (1000 * 60));
+      console.warn(`🚫 Rate limited, reset in ${resetTimeMinutes} minutes`);
+      
+      return res.status(429).json({
+        success: false,
+        error: 'Rate limited',
+        message: 'X.com API rate limit exceeded',
         rateLimited: true,
         resetTime: new Date(rateLimitResetTime).toISOString(),
+        resetInMinutes: resetTimeMinutes,
+        resetInSeconds: Math.ceil((rateLimitResetTime - now) / 1000),
         timestamp: new Date().toISOString()
       });
     }
@@ -119,9 +122,9 @@ app.get('/api/x-mentions', async (req, res) => {
       try {
         // Skip if we're approaching rate limits
         if (requestCount >= MAX_REQUESTS_PER_WINDOW) {
-          console.warn(`⚠️ Approaching rate limit, using fallback for ${symbol}`);
-          results.push(generateFallbackCoin(symbol));
-          continue;
+          console.warn(`⚠️ Approaching rate limit, stopping requests`);
+          rateLimitResetTime = now + (15 * 60 * 1000); // Set 15 minute cooldown
+          break; // Stop making any more requests
         }
 
         const searchQuery = `($${symbol} OR ${getCoinName(symbol)}) -is:retweet lang:en`;
@@ -158,12 +161,11 @@ app.get('/api/x-mentions', async (req, res) => {
         } else if (response.status === 429) {
           console.warn(`🚫 Rate limited on ${symbol}, setting cooldown`);
           rateLimitResetTime = now + (15 * 60 * 1000); // 15 minute cooldown
-          results.push(generateFallbackCoin(symbol));
-          break; // Stop making requests
+          break; // Stop making requests - no more data for now
           
         } else {
           console.warn(`❌ Failed to fetch ${symbol}: ${response.status}`);
-          results.push(generateFallbackCoin(symbol, `API error: ${response.status}`));
+          // Skip this symbol, don't add fake data
         }
 
         // Slower rate limiting - 3 seconds between requests
@@ -171,14 +173,8 @@ app.get('/api/x-mentions', async (req, res) => {
 
       } catch (error) {
         console.error(`❌ Error fetching ${symbol}:`, error.message);
-        results.push(generateFallbackCoin(symbol, error.message));
+        // Skip this symbol, don't add fake data
       }
-    }
-
-    // Fill remaining symbols with fallback data if we hit rate limits
-    const remainingSymbols = symbolList.slice(results.length);
-    for (const symbol of remainingSymbols) {
-      results.push(generateFallbackCoin(symbol));
     }
 
     // Sort by mentions count
@@ -212,25 +208,7 @@ app.get('/api/x-mentions', async (req, res) => {
   }
 });
 
-// Generate fallback data for a single coin
-function generateFallbackCoin(symbol, error = null) {
-  return {
-    symbol: symbol.toUpperCase(),
-    name: getCoinName(symbol),
-    mentions: Math.floor(Math.random() * 200) + 50, // Realistic fallback numbers
-    trend: Math.random() > 0.5 ? 'up' : 'down',
-    trendValue: (Math.random() * 15).toFixed(1),
-    dexScreenerListed: isDexScreenerListed(symbol),
-    fallback: true,
-    error: error,
-    timestamp: new Date().toISOString()
-  };
-}
-
-// Generate fallback data for multiple coins
-function generateFallbackData(symbolList) {
-  return symbolList.map(symbol => generateFallbackCoin(symbol));
-}
+// Fallback functions removed - no more fake data!
 
 // Calculate trend based on historical data
 function calculateTrend(symbol, currentMentions) {
