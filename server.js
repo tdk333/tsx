@@ -19,17 +19,42 @@ app.use(express.json());
 // Serve static files (HTML, CSS, JS)
 app.use(express.static('.'));
 
-// API Health check endpoint
-app.get('/api', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'TerminalScreener X.com API Server',
-    endpoints: ['/api/x-mentions']
+// Health check for DigitalOcean (responds to any request method)
+app.all('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    message: 'TerminalScreener API is running'
   });
 });
 
-// Serve the main HTML file at root (for frontend)
+// API Health check endpoint
+app.get('/api', (req, res) => {
+  console.log('📡 API health check requested');
+  res.json({ 
+    status: 'OK', 
+    message: 'TerminalScreener X.com API Server',
+    endpoints: ['/api/x-mentions'],
+    port: PORT,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint - can serve HTML or JSON based on Accept header
 app.get('/', (req, res) => {
+  console.log(`📥 Root request from ${req.ip} - Accept: ${req.get('Accept')}`);
+  
+  // If request expects JSON (from load balancer health check), return JSON
+  if (req.get('Accept') && req.get('Accept').includes('application/json')) {
+    return res.json({
+      status: 'OK',
+      message: 'TerminalScreener Frontend + API',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Otherwise serve HTML file
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -156,11 +181,53 @@ function isDexScreenerListed(symbol) {
   return dexTokens.includes(symbol.toUpperCase());
 }
 
-// Start server - bind to all interfaces for DigitalOcean
-app.listen(PORT, '0.0.0.0', () => {
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ Server error:', err);
+  res.status(500).json({ error: 'Internal server error', message: err.message });
+});
+
+// Catch all undefined routes
+app.use('*', (req, res) => {
+  console.log(`❓ Unknown route requested: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ 
+    error: 'Route not found',
+    method: req.method,
+    path: req.originalUrl,
+    availableRoutes: ['/', '/api', '/health', '/api/x-mentions']
+  });
+});
+
+// Start server with error handling
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 TerminalScreener API server running on port ${PORT}`);
   console.log(`📡 X API configured: ${process.env.X_BEARER_TOKEN ? 'YES' : 'NO'}`);
   console.log(`🌐 Server bound to 0.0.0.0:${PORT} (all interfaces)`);
-  console.log(`🔗 Should be accessible via DigitalOcean app URL`);
-  console.log(`🐦 X mentions API endpoint: /api/x-mentions`);
+  console.log(`🔗 Health check: /health`);
+  console.log(`🔗 API check: /api`);
+  console.log(`🐦 X mentions API: /api/x-mentions`);
+  console.log(`📱 Frontend: /`);
+  
+  // Log server address details
+  const address = server.address();
+  console.log(`🔧 Server details:`, {
+    address: address.address,
+    port: address.port,
+    family: address.family
+  });
+});
+
+// Handle server errors
+server.on('error', (err) => {
+  console.error('💥 Server failed to start:', err);
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('👋 Shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
