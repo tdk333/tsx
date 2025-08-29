@@ -1,14 +1,14 @@
 name: terminal-screener
 services:
-- name: backend
+- name: web
   source_dir: /
-  run_command: node server.js
+  build_command: npm install
+  run_command: npm start
   environment_slug: node-js
   instance_count: 1
   instance_size_slug: basic-xxs
   http_port: 8080
   routes:
-  - path: /api
   - path: /
   env:
   - key: X_BEARER_TOKEN

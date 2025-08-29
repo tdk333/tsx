@@ -156,10 +156,11 @@ function isDexScreenerListed(symbol) {
   return dexTokens.includes(symbol.toUpperCase());
 }
 
-// Start server
+// Start server - bind to all interfaces for DigitalOcean
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 TerminalScreener API server running on port ${PORT}`);
   console.log(`📡 X API configured: ${process.env.X_BEARER_TOKEN ? 'YES' : 'NO'}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/`);
-  console.log(`🐦 X mentions API: http://localhost:${PORT}/api/x-mentions`);
+  console.log(`🌐 Server bound to 0.0.0.0:${PORT} (all interfaces)`);
+  console.log(`🔗 Should be accessible via DigitalOcean app URL`);
+  console.log(`🐦 X mentions API endpoint: /api/x-mentions`);
 });
