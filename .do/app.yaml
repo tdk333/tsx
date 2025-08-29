@@ -1,0 +1,31 @@
+name: terminal-screener-api
+services:
+- name: api
+  source_dir: /
+  github:
+    repo: your-username/your-repo-name
+    branch: main
+  run_command: node server.js
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /api
+  env:
+  - key: X_BEARER_TOKEN
+    scope: RUN_TIME
+    type: SECRET
+  - key: PORT
+    scope: RUN_TIME
+    value: "8080"
+static_sites:
+- name: frontend
+  source_dir: /
+  github:
+    repo: your-username/your-repo-name
+    branch: main
+  build_command: echo "No build needed"
+  output_dir: /
+  index_document: index.html
+  routes:
+  - path: /
