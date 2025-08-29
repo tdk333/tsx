@@ -2514,24 +2514,14 @@ The setup is free and takes 2 minutes!`);
         }
 
         function startXMentionsPolling() {
-            // Initial load
+            // Only fetch on initial load - no automatic polling
             fetchXMentions();
-            
-            // Poll every 5 minutes
-            xMentionsUpdateInterval = setInterval(() => {
-                console.log('🔄 Auto-refreshing X.com mentions...');
-                fetchXMentions();
-            }, 5 * 60 * 1000);
-            
-            console.log('✅ X.com mentions polling started (5min intervals)');
+            console.log('✅ X.com mentions loaded on-demand (no background polling)');
         }
 
         function stopXMentionsPolling() {
-            if (xMentionsUpdateInterval) {
-                clearInterval(xMentionsUpdateInterval);
-                xMentionsUpdateInterval = null;
-                console.log('⏹️ X.com mentions polling stopped');
-            }
+            // No background polling to stop
+            console.log('⏹️ No background polling to stop');
         }
 
         // Fetch trending pairs from CoinGecko and verify on DexScreener

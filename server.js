@@ -58,13 +58,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Cache for API responses (5 minute cache)
+// Cache for API responses (10 minute cache - longer to reduce API waste)
 const mentionsCache = new Map();
 const historicalData = new Map(); // Store historical mentions for trend calculation
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (extended to save API calls)
 let rateLimitResetTime = 0;
 let requestCount = 0;
-const MAX_REQUESTS_PER_WINDOW = 50; // Conservative limit
+const MAX_REQUESTS_PER_WINDOW = 25; // Even more conservative limit
 
 // X.com mentions endpoint with caching and rate limiting
 app.get('/api/x-mentions', async (req, res) => {
@@ -76,7 +76,7 @@ app.get('/api/x-mentions', async (req, res) => {
     // Check cache first
     const cached = mentionsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-      console.log(`📦 Serving cached data for: ${symbolList.join(', ')}`);
+      console.log(`📦 Serving cached data for: ${symbolList.join(', ')} [User request at ${new Date().toISOString()}]`);
       return res.json({
         success: true,
         data: cached.data,
@@ -87,7 +87,7 @@ app.get('/api/x-mentions', async (req, res) => {
       });
     }
 
-    console.log(`🔍 Fetching fresh data for: ${symbolList.join(', ')}`);
+    console.log(`🔍 Fetching fresh data for: ${symbolList.join(', ')} [User request at ${new Date().toISOString()}]`);
 
     // Check if X API token is configured
     if (!process.env.X_BEARER_TOKEN) {
@@ -168,8 +168,8 @@ app.get('/api/x-mentions', async (req, res) => {
           // Skip this symbol, don't add fake data
         }
 
-        // Slower rate limiting - 3 seconds between requests
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Even slower rate limiting - 5 seconds between requests to be extra conservative
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
       } catch (error) {
         console.error(`❌ Error fetching ${symbol}:`, error.message);
