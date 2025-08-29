@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -15,13 +16,21 @@ app.use(cors({
 
 app.use(express.json());
 
-// Health check endpoint
-app.get('/', (req, res) => {
+// Serve static files (HTML, CSS, JS)
+app.use(express.static('.'));
+
+// API Health check endpoint
+app.get('/api', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'TerminalScreener X.com API Server',
     endpoints: ['/api/x-mentions']
   });
+});
+
+// Serve the main HTML file at root (for frontend)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // X.com mentions endpoint
