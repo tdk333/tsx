@@ -159,6 +159,12 @@ app.get('/api/x-mentions', async (req, res) => {
         });
 
         console.log(`📡 Response status: ${response.status} for ${symbol}`);
+        
+        // Log rate limit headers from X API
+        console.log(`📊 X API Rate Limit Headers for ${symbol}:`);
+        console.log(`  x-rate-limit-limit: ${response.headers.get('x-rate-limit-limit')}`);
+        console.log(`  x-rate-limit-remaining: ${response.headers.get('x-rate-limit-remaining')}`);
+        console.log(`  x-rate-limit-reset: ${response.headers.get('x-rate-limit-reset')}`);
 
         if (response.ok) {
           const data = await response.json();
