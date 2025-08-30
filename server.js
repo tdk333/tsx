@@ -62,9 +62,12 @@ app.get('/', (req, res) => {
 const mentionsCache = new Map();
 const historicalData = new Map(); // Store historical mentions for trend calculation
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (extended to save API calls)
-let rateLimitResetTime = 0;
-let requestCount = 0;
+let rateLimitResetTime = 0; // Force reset on startup
+let requestCount = 0; // Force reset on startup
 const MAX_REQUESTS_PER_WINDOW = 25; // Even more conservative limit
+
+// Force clear any stuck rate limit state on startup
+console.log('🔄 Clearing rate limit state on startup');
 
 // X.com mentions endpoint with caching and rate limiting
 app.get('/api/x-mentions', async (req, res) => {
@@ -164,7 +167,8 @@ app.get('/api/x-mentions', async (req, res) => {
           break; // Stop making requests - no more data for now
           
         } else {
-          console.warn(`❌ Failed to fetch ${symbol}: ${response.status}`);
+          const errorText = await response.text();
+          console.warn(`❌ Failed to fetch ${symbol}: ${response.status} - ${errorText}`);
           // Skip this symbol, don't add fake data
         }
 
@@ -335,6 +339,21 @@ function isDexScreenerListed(symbol) {
   ];
   return dexTokens.includes(symbol.toUpperCase());
 }
+
+// Reset rate limit endpoint (for debugging)
+app.post('/api/reset-rate-limit', (req, res) => {
+  rateLimitResetTime = 0;
+  requestCount = 0;
+  mentionsCache.clear();
+  console.log('🔄 Rate limit manually reset');
+  res.json({
+    success: true,
+    message: 'Rate limit reset',
+    rateLimitResetTime: rateLimitResetTime,
+    requestCount: requestCount,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // New endpoint to get available coins
 app.get('/api/coins', (req, res) => {

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(start index.html)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(taskkill:*)",
+      "Bash(\"taskkill\" \"/F\" \"/PID\" \"15256\")"
     ],
     "deny": [],
     "ask": []
