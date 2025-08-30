@@ -102,6 +102,14 @@ app.get('/api/x-mentions', async (req, res) => {
 
     // Check rate limiting
     const now = Date.now();
+    
+    // Force reset if more than 15 minutes have passed since rate limit was set
+    if (rateLimitResetTime > 0 && now >= rateLimitResetTime) {
+      console.log('🔄 Auto-resetting rate limit - cooldown period has passed');
+      rateLimitResetTime = 0;
+      requestCount = 0;
+    }
+    
     console.log(`🔍 Rate limit check: now=${now}, resetTime=${rateLimitResetTime}, requestCount=${requestCount}`);
     
     if (now < rateLimitResetTime) {
@@ -133,25 +141,11 @@ app.get('/api/x-mentions', async (req, res) => {
           break; // Stop making any more requests
         }
 
-        // Test with simpler endpoint first
-        const testUrl = `https://api.twitter.com/2/users/me`;
-        console.log(`🧪 Testing auth with: ${testUrl}`);
-        
-        const testResponse = await fetch(testUrl, {
-          headers: {
-            'Authorization': `Bearer ${process.env.X_BEARER_TOKEN}`
-          }
-        });
-        console.log(`🧪 Auth test result: ${testResponse.status}`);
-        
-        if (!testResponse.ok) {
-          const testError = await testResponse.text();
-          console.log(`🧪 Auth test error: ${testError}`);
-        }
+        // Skip auth test - Bearer token auth is fine for search endpoint
 
-        // Try basic search endpoint instead of counts
-        const searchQuery = `($${symbol} OR ${getCoinName(symbol)}) -is:retweet lang:en`;
-        const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(searchQuery)}&max_results=10&tweet.fields=public_metrics,created_at`;
+        // Use basic query format without cashtag operator
+        const searchQuery = `(${symbol} OR ${getCoinName(symbol)}) -is:retweet lang:en`;
+        const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(searchQuery)}&max_results=10`;
         
         console.log(`🔗 Making request to: ${url}`);
         console.log(`🔑 Using token: ${process.env.X_BEARER_TOKEN?.substring(0, 20)}...`);
