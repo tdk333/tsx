@@ -186,9 +186,10 @@ app.get('/api/x-mentions', async (req, res) => {
       timestamp: now
     });
 
-    // Reset request count every 15 minutes
-    if (now - rateLimitResetTime > 15 * 60 * 1000) {
+    // Reset request count and rate limit if cooldown period has passed
+    if (now >= rateLimitResetTime) {
       requestCount = 0;
+      rateLimitResetTime = 0;
     }
 
     res.json({
