@@ -102,9 +102,11 @@ app.get('/api/x-mentions', async (req, res) => {
 
     // Check rate limiting
     const now = Date.now();
+    console.log(`🔍 Rate limit check: now=${now}, resetTime=${rateLimitResetTime}, requestCount=${requestCount}`);
+    
     if (now < rateLimitResetTime) {
       const resetTimeMinutes = Math.ceil((rateLimitResetTime - now) / (1000 * 60));
-      console.warn(`🚫 Rate limited, reset in ${resetTimeMinutes} minutes`);
+      console.warn(`🚫 Rate limited, reset in ${resetTimeMinutes} minutes (resetTime: ${new Date(rateLimitResetTime).toISOString()})`);
       
       return res.status(429).json({
         success: false,
@@ -143,6 +145,7 @@ app.get('/api/x-mentions', async (req, res) => {
 
         if (response.ok) {
           const data = await response.json();
+          console.log(`📊 Raw API response for ${symbol}:`, JSON.stringify(data, null, 2));
           const totalMentions = data.data?.reduce((sum, hour) => sum + hour.tweet_count, 0) || 0;
           
           // Calculate trend based on historical data
