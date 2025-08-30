@@ -126,14 +126,35 @@ app.get('/api/x-mentions', async (req, res) => {
     for (const symbol of symbolList) {
       try {
         // Skip if we're approaching rate limits
+        console.log(`🔍 Request check for ${symbol}: requestCount=${requestCount}, MAX=${MAX_REQUESTS_PER_WINDOW}`);
         if (requestCount >= MAX_REQUESTS_PER_WINDOW) {
-          console.warn(`⚠️ Approaching rate limit, stopping requests`);
+          console.warn(`⚠️ Approaching rate limit (${requestCount}/${MAX_REQUESTS_PER_WINDOW}), stopping requests`);
           rateLimitResetTime = now + (15 * 60 * 1000); // Set 15 minute cooldown
           break; // Stop making any more requests
         }
 
+        // Test with simpler endpoint first
+        const testUrl = `https://api.twitter.com/2/users/me`;
+        console.log(`🧪 Testing auth with: ${testUrl}`);
+        
+        const testResponse = await fetch(testUrl, {
+          headers: {
+            'Authorization': `Bearer ${process.env.X_BEARER_TOKEN}`
+          }
+        });
+        console.log(`🧪 Auth test result: ${testResponse.status}`);
+        
+        if (!testResponse.ok) {
+          const testError = await testResponse.text();
+          console.log(`🧪 Auth test error: ${testError}`);
+        }
+
+        // Try basic search endpoint instead of counts
         const searchQuery = `($${symbol} OR ${getCoinName(symbol)}) -is:retweet lang:en`;
-        const url = `https://api.twitter.com/2/tweets/counts/recent?query=${encodeURIComponent(searchQuery)}&granularity=hour`;
+        const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(searchQuery)}&max_results=10&tweet.fields=public_metrics,created_at`;
+        
+        console.log(`🔗 Making request to: ${url}`);
+        console.log(`🔑 Using token: ${process.env.X_BEARER_TOKEN?.substring(0, 20)}...`);
         
         requestCount++;
         const response = await fetch(url, {
@@ -143,10 +164,13 @@ app.get('/api/x-mentions', async (req, res) => {
           }
         });
 
+        console.log(`📡 Response status: ${response.status} for ${symbol}`);
+
         if (response.ok) {
           const data = await response.json();
           console.log(`📊 Raw API response for ${symbol}:`, JSON.stringify(data, null, 2));
-          const totalMentions = data.data?.reduce((sum, hour) => sum + hour.tweet_count, 0) || 0;
+          // Count tweets instead of using hourly counts
+          const totalMentions = data.data?.length || 0;
           
           // Calculate trend based on historical data
           const trendData = calculateTrend(symbol, totalMentions);

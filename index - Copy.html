@@ -1,0 +1,4285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>DEXScreener Terminal</title>
+    <style>
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            z-index: 100000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: #58a6ff;
+            font-weight: 600;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .header-search {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 100000;
+        }
+
+        .header-search input {
+            padding: 8px 12px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-size: 0.85rem;
+            min-width: 280px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .header-search input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+
+        .header-search select {
+            padding: 8px 12px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-size: 0.85rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 99999;
+            display: none;
+            margin-top: 2px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .search-suggestion {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #21262d;
+            transition: background-color 0.2s;
+        }
+
+        .search-suggestion:hover {
+            background: #21262d;
+        }
+
+        .suggestion-name {
+            font-weight: 500;
+            color: #c9d1d9;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .suggestion-symbol {
+            color: #58a6ff;
+            font-size: 0.8rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .suggestion-chain {
+            color: #7d8590;
+            font-size: 0.7rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background: #238636;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.8rem;
+            min-width: 140px;
+            text-align: center;
+            font-family: 'SF Mono', monospace;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+        }
+
+        .wallet-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .groups-toggle {
+            background: #1f6feb;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .groups-toggle:hover {
+            background: #388bfd;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            background: #21262d;
+            color: #f85149;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            border: 1px solid #da3633;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .status.connected {
+            background: #21262d;
+            color: #56d364;
+            border: 1px solid #238636;
+        }
+
+        .container {
+            height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            padding: 5px;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 5px;
+            flex: 1;
+            height: calc(100vh - 120px);
+            position: relative;
+        }
+
+        .charts-section {
+            flex: 2;
+            min-width: 0;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            height: 100%;
+        }
+
+        .chart-container {
+            background: #161b22;
+            border-radius: 6px;
+            padding: 3px;
+            border: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: border-color 0.2s;
+        }
+
+        .chart-container:hover {
+            border-color: #58a6ff;
+        }
+
+        .chart-container.pinned {
+            border-color: #d29922;
+            box-shadow: 0 0 0 1px #d29922;
+        }
+
+        .chart-container.pinned::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #d29922, #b8860b);
+        }
+
+        .chart-container.selected {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 1px #58a6ff;
+            background: rgba(88, 166, 255, 0.04);
+        }
+
+        .chart-container.selected::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #58a6ff, #388bfd);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+            padding-top: 2px;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-height: 22px;
+        }
+
+        .chart-title-section {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chart-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #58a6ff;
+            line-height: 1.2;
+            flex-shrink: 0;
+            margin-left: 6px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-price-data {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+            width: 100%;
+        }
+
+        .chart-price {
+            font-size: 0.7rem;
+            color: #c9d1d9;
+            font-weight: 500;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-mc {
+            font-size: 0.6rem;
+            color: #7d8590;
+            background: #21262d;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-time-pill {
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            font-weight: 500;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-time-pill.positive {
+            color: #56d364;
+            background: rgba(86, 211, 100, 0.15);
+        }
+
+        .chart-time-pill.negative {
+            color: #f85149;
+            background: rgba(248, 81, 73, 0.15);
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .chart-pin {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #d29922;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-pin:hover {
+            background: #30363d;
+        }
+
+        .chart-pin.pinned {
+            background: #d29922;
+            color: #0d1117;
+            border-color: #d29922;
+        }
+
+        .chart-remove {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #f85149;
+            cursor: pointer;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .chart-remove:hover {
+            background: #30363d;
+        }
+
+        .chart-frame {
+            width: 100%;
+            flex: 1;
+            border: none;
+            border-radius: 8px;
+            background: #000;
+            min-height: 0;
+        }
+
+        .groups-panel {
+            position: fixed;
+            top: 80px;
+            right: -400px;
+            width: 380px;
+            height: calc(100vh - 80px);
+            background: #161b22;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .groups-panel.open {
+            right: 5px;
+        }
+
+        .groups-header {
+            padding: 15px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .groups-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #58a6ff;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .close-groups {
+            background: none;
+            border: none;
+            color: #7d8590;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .close-groups:hover {
+            background: #30363d;
+            color: #c9d1d9;
+        }
+
+        .groups-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .new-group-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #21262d;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+
+        .new-group-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .new-group-input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .save-btn {
+            background: #238636;
+            flex: 1;
+        }
+
+        .save-btn:hover {
+            background: #2ea043;
+        }
+
+        .load-btn {
+            background: #da7633;
+            flex: 1;
+        }
+
+        .load-btn:hover {
+            background: #e18446;
+        }
+
+        .export-import-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .export-btn {
+            background: #8957e5;
+            flex: 1;
+        }
+
+        .export-btn:hover {
+            background: #986ee2;
+        }
+
+        .import-btn {
+            background: #da3633;
+            flex: 1;
+        }
+
+        .import-btn:hover {
+            background: #e5484d;
+        }
+
+        .group-item {
+            background: #21262d;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .group-item:hover {
+            border-color: #58a6ff;
+            transform: translateX(3px);
+        }
+
+        .group-name {
+            font-weight: 600;
+            color: #c9d1d9;
+            margin-bottom: 5px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .group-info {
+            font-size: 0.7rem;
+            color: #7d8590;
+            margin-bottom: 8px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .group-actions-list {
+            display: flex;
+            gap: 5px;
+        }
+
+        .group-btn {
+            padding: 4px 8px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .group-btn.load {
+            background: #21262d;
+            color: #58a6ff;
+            border-color: #58a6ff;
+        }
+
+        .group-btn.load:hover {
+            background: #58a6ff;
+            color: #0d1117;
+        }
+
+        .group-btn.delete {
+            background: #21262d;
+            color: #f85149;
+            border-color: #da3633;
+        }
+
+        .group-btn.delete:hover {
+            background: #da3633;
+            color: #ffffff;
+        }
+
+        .sidebar {
+            flex: 1;
+            min-width: 280px;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .trending-section {
+            background: #161b22;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #30363d;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .x-mentions-section {
+            background: #161b22;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #30363d;
+            min-height: 300px;
+            max-height: 400px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .x-mention-filter {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+        }
+
+        .mention-item {
+            background: rgba(29, 161, 242, 0.08);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(29, 161, 242, 0.2);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mention-item:hover {
+            background: rgba(29, 161, 242, 0.15);
+            border-color: rgba(29, 161, 242, 0.4);
+        }
+
+        .mention-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .mention-coin {
+            font-weight: 600;
+            color: #1da1f2;
+            font-size: 0.85rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .mention-count {
+            font-size: 0.7rem;
+            color: #c9d1d9;
+            background: rgba(29, 161, 242, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .mention-trend {
+            font-size: 0.65rem;
+            color: #7d8590;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .mention-trend.up {
+            color: #56d364;
+        }
+
+        .mention-trend.down {
+            color: #f85149;
+        }
+
+        .data-source {
+            font-size: 0.6rem;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-family: 'SF Mono', monospace;
+            margin-left: 5px;
+            background: rgba(88, 166, 255, 0.2);
+            color: #58a6ff;
+        }
+
+        /* Fallback data styling removed - no more fake data! */
+
+        .trending-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .trending-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .trending-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .refresh-btn {
+            background: #238636;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .refresh-btn:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+        }
+
+        .mc-filter {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+        }
+
+        .mc-filter-btn {
+            padding: 3px 6px;
+            border: 1px solid #30363d;
+            border-radius: 3px;
+            background: #21262d;
+            color: #7d8590;
+            cursor: pointer;
+            font-size: 0.6rem;
+            transition: all 0.3s ease;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .mc-filter-btn:hover {
+            border-color: #58a6ff;
+            color: #c9d1d9;
+        }
+
+        .mc-filter-btn.active {
+            background: #58a6ff;
+            border-color: #58a6ff;
+            color: #ffffff;
+        }
+
+        .trending-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #58a6ff;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .trending-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .trending-item {
+            background: #21262d;
+            padding: 12px 35px 12px 12px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 85px;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .trending-item:hover {
+            transform: translateX(5px);
+            border-color: #58a6ff;
+        }
+
+        .trending-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #58a6ff, #388bfd);
+        }
+
+        .coin-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: nowrap;
+            gap: 8px;
+        }
+
+        .coin-name-section {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+            min-width: 0;
+            max-width: calc(100% - 40px);
+        }
+
+        .coin-price-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 3px;
+            min-width: 120px;
+            flex-shrink: 0;
+        }
+
+        .coin-price-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .sidebar-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .sidebar-toggle {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #c9d1d9;
+            cursor: pointer;
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            transition: all 0.3s ease;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .sidebar-toggle:hover {
+            border-color: #58a6ff;
+            color: #c9d1d9;
+        }
+
+        .sidebar-toggle.active {
+            background: #58a6ff;
+            border-color: #58a6ff;
+            color: #ffffff;
+        }
+
+        .watchlist-section {
+            background: #161b22;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #30363d;
+            min-height: 250px;
+            max-height: 350px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .watchlist-item {
+            background: #21262d;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .watchlist-item:hover {
+            border-color: #58a6ff;
+            transform: translateX(2px);
+        }
+
+        .watchlist-name {
+            font-weight: 500;
+            color: #c9d1d9;
+            font-size: 0.75rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .watchlist-price {
+            font-size: 0.65rem;
+            color: #7d8590;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .alerts-section {
+            background: #161b22;
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #30363d;
+            min-height: 250px;
+            max-height: 350px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .new-alert-section {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(218, 118, 51, 0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(218, 118, 51, 0.2);
+        }
+
+        .alert-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .alert-input {
+            padding: 6px 8px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            background: #0d1117;
+            color: #c9d1d9;
+            font-size: 0.8rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .alert-input:focus {
+            outline: none;
+            border-color: #da7633;
+            box-shadow: 0 0 0 3px rgba(218, 118, 51, 0.3);
+        }
+
+        .alert-condition-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .active-alerts {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            background: rgba(218, 118, 51, 0.08);
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(218, 118, 51, 0.2);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-details {
+            flex: 1;
+        }
+
+        .alert-symbol {
+            font-weight: 600;
+            color: #da7633;
+            font-size: 0.8rem;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .alert-condition {
+            font-size: 0.7rem;
+            color: #c9d1d9;
+            margin-top: 2px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .alert-current-price {
+            font-size: 0.6rem;
+            color: #7d8590;
+            margin-top: 2px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .alert-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .alert-delete {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #f85149;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            transition: all 0.3s ease;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .alert-delete:hover {
+            background: #30363d;
+        }
+
+        .alert-triggered {
+            background: rgba(86, 211, 100, 0.15);
+            border-color: rgba(86, 211, 100, 0.3);
+            animation: alertPulse 2s infinite;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .coin-name {
+            font-weight: 600;
+            color: #c9d1d9;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .coin-symbol {
+            font-size: 0.65rem;
+            color: #7d8590;
+            margin-left: 4px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .coin-price {
+            font-size: 0.75rem;
+            color: #58a6ff;
+            font-weight: 500;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .coin-details {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 4px;
+            font-size: 0.65rem;
+            overflow: hidden;
+        }
+
+        .coin-change {
+            font-size: 0.65rem;
+            font-weight: 500;
+            padding: 1px 4px;
+            border-radius: 3px;
+            white-space: nowrap;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .coin-change.positive {
+            color: #56d364;
+            background: rgba(86, 211, 100, 0.15);
+        }
+
+        .coin-change.negative {
+            color: #f85149;
+            background: rgba(248, 81, 73, 0.15);
+        }
+
+        .coin-mcap {
+            font-size: 0.65rem;
+            color: #7d8590;
+            white-space: nowrap;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .coin-chain {
+            font-size: 0.55rem;
+            color: #7d8590;
+            background: #30363d;
+            padding: 1px 4px;
+            border-radius: 3px;
+            white-space: nowrap;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .coin-volume {
+            font-size: 0.55rem;
+            color: #7d8590;
+            background: rgba(86, 211, 100, 0.08);
+            padding: 1px 4px;
+            border-radius: 3px;
+            white-space: nowrap;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .trending-rank {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: linear-gradient(45deg, #da7633, #b45309);
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 22px;
+            text-align: center;
+            z-index: 10;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .no-data {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #7d8590;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #238636;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 999999;
+            opacity: 0;
+            transform: translateX(120%) scale(0.8);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #2ea043;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+
+        .toast.error {
+            background: #da3633;
+            border: 1px solid #f85149;
+        }
+
+        .hidden-file-input {
+            display: none;
+        }
+
+        /* Enhanced responsive breakpoints for better chart visibility */
+        @media (max-width: 1800px) {
+            .charts-grid {
+                grid-template-columns: repeat(3, 1fr); /* 6 charts in 3x2 grid */
+            }
+        }
+
+        @media (max-width: 1600px) {
+            .charts-grid {
+                grid-template-columns: repeat(3, 1fr); /* 3 charts in 3x1 grid (horizontal) */
+            }
+        }
+
+        @media (max-width: 1400px) {
+            .charts-grid {
+                grid-template-columns: repeat(3, 1fr); /* 3 charts in 3x1 grid (horizontal) */
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 charts in 2x1 grid */
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 charts in 2x1 grid */
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                min-height: 450px;
+                margin-bottom: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px;
+                position: sticky;
+                top: 0;
+                z-index: 1000;
+            }
+            
+            .header h1 {
+                font-size: 1.4rem;
+                text-align: center;
+            }
+            
+            .header-left {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .header-search {
+                width: 100%;
+                flex-direction: column;
+                gap: 8px;
+                max-width: 400px;
+            }
+            
+            .header-search input {
+                width: 100%;
+                min-width: unset;
+                max-width: unset;
+                font-size: 16px; /* Prevent zoom on iOS */
+                padding: 12px;
+                min-height: 44px;
+            }
+            
+            .header-search select {
+                width: 100%;
+                font-size: 16px; /* Prevent zoom on iOS */
+                padding: 12px;
+                min-height: 44px;
+            }
+            
+            .wallet-section {
+                flex-direction: column;
+                gap: 8px;
+                width: 100%;
+                max-width: 400px;
+            }
+            
+            .wallet-section .btn {
+                width: 100%;
+                min-height: 48px;
+                font-size: 16px;
+            }
+            
+            .groups-toggle {
+                width: 100%;
+                min-height: 48px;
+                font-size: 16px;
+            }
+            
+            .main-content {
+                flex-direction: column;
+                gap: 10px;
+                padding: 0 5px;
+            }
+            
+            .sidebar {
+                order: -1; /* Move sidebar above charts on mobile */
+                flex-direction: row;
+                gap: 10px;
+                min-width: unset;
+                max-width: unset;
+                overflow-x: auto;
+                padding-bottom: 10px;
+            }
+            
+            .trending-section, 
+            .watchlist-section {
+                min-width: 280px;
+                max-width: 320px;
+                flex-shrink: 0;
+                min-height: 300px;
+                max-height: 350px;
+            }
+            
+            /* Reorder sections on mobile - watchlist first, then trending */
+            .watchlist-section {
+                order: 1;
+            }
+            
+            .trending-section {
+                order: 2;
+            }
+            
+            /* Mobile-optimized chart header */
+            .chart-header {
+                flex-direction: column;
+                gap: 8px;
+                padding: 8px;
+                align-items: flex-start;
+                position: relative;
+            }
+            
+            .chart-title-section {
+                width: 100%;
+                order: 2;
+            }
+            
+            /* Chart controls on separate line on mobile - above coin data */
+            .chart-controls {
+                justify-content: flex-end;
+                width: 100%;
+                position: static;
+                background: none;
+                border-radius: 0;
+                padding: 0;
+                order: 1;
+            }
+            
+            .chart-price-data {
+                flex-wrap: wrap;
+                gap: 4px;
+                justify-content: flex-start;
+            }
+            
+            .chart-title {
+                font-size: 1rem;
+                font-weight: 700;
+                margin-right: 12px;
+            }
+            
+            .chart-price {
+                font-size: 0.9rem;
+            }
+            
+            .chart-mc {
+                font-size: 0.75rem;
+                padding: 2px 6px;
+            }
+            
+            .chart-time-pill {
+                font-size: 0.7rem;
+                padding: 2px 6px;
+            }
+            
+            .chart-controls {
+                justify-content: flex-end;
+                width: 100%;
+            }
+            
+            .chart-pin, .chart-remove {
+                min-height: 32px;
+                min-width: 32px;
+                padding: 6px;
+                font-size: 0.9rem;
+            }
+            
+            /* Groups panel mobile optimization */
+            .groups-panel {
+                width: 100%;
+                right: -100%;
+                top: 0;
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .groups-panel.open {
+                right: 0;
+            }
+            
+            .groups-header {
+                padding: 20px 15px;
+                background: #0d1117;
+                position: sticky;
+                top: 0;
+                z-index: 1001;
+            }
+            
+            .close-groups {
+                min-height: 44px;
+                min-width: 44px;
+                font-size: 1.5rem;
+            }
+            
+            /* Mobile trending items */
+            .trending-item {
+                padding: 16px;
+                min-height: 100px;
+                cursor: pointer;
+                -webkit-tap-highlight-color: rgba(88, 166, 255, 0.2);
+            }
+            
+            .coin-name {
+                font-size: 0.9rem;
+                max-width: 180px;
+            }
+            
+            .coin-price {
+                font-size: 0.85rem;
+            }
+            
+            .coin-details {
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            
+            /* Touch-friendly buttons */
+            .btn {
+                min-height: 48px;
+                padding: 12px 20px;
+                font-size: 16px;
+                border-radius: 8px;
+                -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            .mc-filter-btn {
+                min-height: 40px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .refresh-btn {
+                min-height: 40px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            
+            /* Search suggestions mobile */
+            .search-suggestions {
+                position: fixed;
+                top: auto;
+                left: 10px;
+                right: 10px;
+                margin-top: 5px;
+                max-height: 60vh;
+                z-index: 10000;
+            }
+            
+            .search-suggestion {
+                padding: 16px;
+                min-height: 60px;
+                -webkit-tap-highlight-color: rgba(88, 166, 255, 0.2);
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                font-size: 13px;
+            }
+            
+            .chart-container {
+                min-height: 400px;
+            }
+            
+            .header {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            
+            .header-search input,
+            .header-search select {
+                font-size: 16px;
+                padding: 14px;
+            }
+            
+            .sidebar {
+                flex-direction: column;
+                overflow-x: visible;
+            }
+            
+            .trending-section, 
+            .watchlist-section {
+                min-width: unset;
+                max-width: unset;
+            }
+            
+            .chart-title {
+                font-size: 0.9rem;
+            }
+            
+            .chart-price {
+                font-size: 0.8rem;
+            }
+            
+            .chart-time-pill {
+                font-size: 0.65rem;
+                padding: 1px 4px;
+            }
+            
+            .trending-item {
+                padding: 14px;
+                min-height: 90px;
+            }
+            
+            .coin-name {
+                font-size: 0.85rem;
+                max-width: 150px;
+            }
+            
+            .coin-price {
+                font-size: 0.8rem;
+            }
+            
+            .groups-panel {
+                border-radius: 0;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .header h1 {
+                font-size: 1.1rem;
+            }
+            
+            .chart-container {
+                min-height: 350px;
+            }
+            
+            .trending-item {
+                padding: 12px;
+                min-height: 80px;
+            }
+            
+            .coin-name {
+                font-size: 0.8rem;
+                max-width: 120px;
+            }
+            
+            .chart-title {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Touch improvements for all screen sizes */
+        @media (hover: none) and (pointer: coarse) {
+            .trending-item:hover {
+                transform: none;
+                border-color: #30363d;
+            }
+            
+            .trending-item:active {
+                transform: scale(0.98);
+                border-color: #58a6ff;
+                background: rgba(88, 166, 255, 0.05);
+            }
+            
+            .btn:hover {
+                transform: none;
+            }
+            
+            .btn:active {
+                transform: scale(0.95);
+            }
+            
+            .chart-container:hover {
+                border-color: #30363d;
+            }
+            
+            .chart-container:active {
+                border-color: #58a6ff;
+            }
+            
+            .search-suggestion:hover {
+                background: #21262d;
+            }
+            
+            .search-suggestion:active {
+                background: #30363d;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>DEXScreener Terminal v1.1</h1>
+            <div class="header-search">
+                <input type="text" id="tokenSearch" placeholder="Search token...">
+                <div class="search-suggestions" id="searchSuggestions"></div>
+                <select id="timeframe">
+                    <option value="4h" selected>4h</option>
+                    <option value="1h">1h</option>
+                    <option value="1d">1d</option>
+                </select>
+                <select id="maxCharts" onchange="updateMaxChartsSetting()">
+                    <option value="auto" selected>Auto Charts</option>
+                    <option value="1">Max 1</option>
+                    <option value="2">Max 2</option>
+                    <option value="3">Max 3</option>
+                    <option value="4">Max 4</option>
+                    <option value="6">Max 6</option>
+                </select>
+            </div>
+        </div>
+        <div class="wallet-section">
+            <span class="status" id="connectionStatus">🔴 Disconnected</span>
+            <button class="groups-toggle" onclick="toggleGroupsPanel()">📊 Chart Groups</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="charts-section">
+                <div class="charts-grid" id="chartsGrid">
+                    <!-- Charts will be loaded here -->
+                </div>
+            </div>
+
+            <div class="groups-panel" id="groupsPanel">
+                <div class="groups-header">
+                    <h2 class="groups-title">Chart Groups</h2>
+                    <button class="close-groups" onclick="toggleGroupsPanel()">&times;</button>
+                </div>
+                <div class="groups-content" id="groupsContent">
+                    <div class="new-group-section">
+                        <h3 style="margin-bottom: 10px; color: #58a6ff; font-family: 'SF Mono', monospace;">Save Current Charts</h3>
+                        <input type="text" id="groupNameInput" class="new-group-input" placeholder="Enter group name..." maxlength="50">
+                        <div class="group-actions">
+                            <button class="btn save-btn" onclick="saveCurrentChartGroup()">Save Group</button>
+                            <button class="btn load-btn" onclick="loadDefaultCharts()">Load Default</button>
+                        </div>
+                        <div class="export-import-actions">
+                            <button class="btn export-btn" onclick="exportChartGroups()">📥 Export</button>
+                            <button class="btn import-btn" onclick="importChartGroups()">📤 Import</button>
+                        </div>
+                    </div>
+                    <div id="savedGroups">
+                        <!-- Saved groups will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="trending-section">
+                    <div class="trending-header">
+                        <div class="trending-controls">
+                            <div class="trending-title-row">
+                                <h2 class="trending-title">🔥 Trending (DEX)</h2>
+                                <button class="refresh-btn" onclick="refreshTrendingData()">🔄 Refresh</button>
+                            </div>
+                            <div class="mc-filter">
+                                <button class="mc-filter-btn active" onclick="filterByMarketCap('all')">All</button>
+                                <button class="mc-filter-btn" onclick="filterByMarketCap('large')">$1B+</button>
+                                <button class="mc-filter-btn" onclick="filterByMarketCap('mid')">$100M+</button>
+                                <button class="mc-filter-btn" onclick="filterByMarketCap('small')">$10M+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="trending-list" id="trendingList">
+                        <div class="no-data">🔄 Loading trending tokens from CoinGecko...</div>
+                    </div>
+                </div>
+
+                <div class="watchlist-section" id="watchlistSection">
+                    <div class="sidebar-header">
+                        <h2 style="font-size: 1.1rem; font-weight: 600; color: #58a6ff; font-family: 'SF Mono', monospace;">📋 Watchlist</h2>
+                    </div>
+                    <div id="watchlistContent">
+                        <div class="watchlist-item" onclick="addTokenChart('BTC', 'Bitcoin', '$67234', '+2.34%')" data-symbol="BTC">
+                            <span class="watchlist-name">Bitcoin</span>
+                            <span class="watchlist-price" style="display: none;">Connect for live price</span>
+                        </div>
+                        <div class="watchlist-item" onclick="addTokenChart('ETH', 'Ethereum', '$3456', '+1.23%')" data-symbol="ETH">
+                            <span class="watchlist-name">Ethereum</span>
+                            <span class="watchlist-price" style="display: none;">Connect for live price</span>
+                        </div>
+                        <div class="watchlist-item" onclick="addTokenChart('SOL', 'Solana', '$98', '+6.78%')" data-symbol="SOL">
+                            <span class="watchlist-name">Solana</span>
+                            <span class="watchlist-price" style="display: none;">Connect for live price</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="x-mentions-section">
+                    <div class="trending-header">
+                        <div class="trending-controls">
+                            <div class="trending-title-row">
+                                <h2 class="trending-title">🐦 X.com Mentions</h2>
+                                <button class="refresh-btn" onclick="refreshXMentions()">🔄 Refresh</button>
+                            </div>
+                            <div class="x-mention-filter">
+                                <button class="mc-filter-btn active" onclick="toggleMentionType('global')" id="globalBtn">Global</button>
+                                <button class="mc-filter-btn" onclick="toggleMentionType('dexscreener')" id="dexscreenerBtn">DEX Only</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="trending-list" id="xMentionsList">
+                        <div class="no-data">🔄 Loading social trending data...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for importing -->
+    <input type="file" id="fileInput" class="hidden-file-input" accept=".json" onchange="handleFileImport(event)">
+
+    <script>
+        // Global variables
+        let pinnedCharts = new Set();
+        let selectedChart = null; // Track selected chart for replacement
+        let wsConnected = false;
+        let selectedToken = null;
+        let searchTimeout = null;
+        let lastReplacementIndex = -1;
+        
+        // Responsive chart management
+        let currentResolutionMode = 'desktop'; // desktop, tablet, mobile, small
+        let hiddenCharts = new Set(); // Track temporarily hidden charts for resolution
+        let responsiveMode = true; // Allow toggling responsive behavior
+        let userMaxCharts = 'auto'; // User preference for max charts
+        
+        // WebSocket variables
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        let reconnectInterval = null;
+        
+        // CoinGecko API configuration
+        const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
+        
+        // Market cap data cache
+        let marketCapData = new Map();
+        let marketCapInterval = null;
+        
+        // DexScreener API cache
+        let dexScreenerCache = new Map();
+        let searchAbortController = null;
+
+        // Chart groups storage
+        let savedChartGroups = [];
+
+        // Trending data
+        let allTrendingData = [];
+        let trendingUpdateInterval = null;
+        let lastTrendingUpdate = 0;
+        let trendingCache = new Map();
+
+        // X.com mentions data
+        let xMentionsData = [];
+        let xMentionsUpdateInterval = null;
+        let currentMentionType = 'global'; // 'global' or 'dexscreener'
+        let xMentionsCache = new Map();
+        
+        // API configuration - now using backend server to avoid CORS
+        const API_BASE_URL = window.location.origin.includes('localhost') 
+            ? 'http://localhost:8080' 
+            : 'https://coral-app-jhlwb.ondigitalocean.app'; // Replace with your DigitalOcean app URL
+
+        // Default tokens to load (6 charts)
+        const defaultTokens = [
+            { name: "Bitcoin", symbol: "BTC", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", chain: "ethereum", pairAddress: "0x004375dff511095cc5a197a54140a24efef3a416" },
+            { name: "Ethereum", symbol: "ETH", address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", chain: "ethereum" },
+            { name: "Uniswap", symbol: "UNI", address: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984", chain: "ethereum" },
+            { name: "Chainlink", symbol: "LINK", address: "0x514910771af9ca656af840dff83e8264ecf986ca", chain: "ethereum" },
+            { name: "Aave", symbol: "AAVE", address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9", chain: "ethereum" },
+            { name: "Compound", symbol: "COMP", address: "0xc00e94cb662c3520282e6f5717214004a7f26888", chain: "ethereum" }
+        ];
+
+        // Enhanced token database with 1h, 6h, 24h data
+        const tokenDatabase = [
+            { name: "Bitcoin", symbol: "BTC", price: "$67,234", change: "+2.34%", mcap: "$1.3T", mcapValue: 1300000000000, chain: "ethereum", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", move1h: "+0.8%", move6h: "+1.5%", move24h: "+2.34%" },
+            { name: "Ethereum", symbol: "ETH", price: "$3,456", change: "+1.23%", mcap: "$415B", mcapValue: 415000000000, chain: "ethereum", address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", move1h: "+0.4%", move6h: "+0.9%", move24h: "+1.23%" },
+            { name: "Pepe", symbol: "PEPE", price: "$0.000001234", change: "+15.67%", mcap: "$1.2B", mcapValue: 1200000000, chain: "ethereum", address: "0x6982508145454ce325ddbe47a25d4ec3d2311933", move1h: "+2.3%", move6h: "+8.1%", move24h: "+15.67%" },
+            { name: "Shiba Inu", symbol: "SHIB", price: "$0.000008", change: "-2.34%", mcap: "$4.8B", mcapValue: 4800000000, chain: "ethereum", address: "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce", move1h: "+0.8%", move6h: "-1.1%", move24h: "-2.34%" },
+            { name: "Uniswap", symbol: "UNI", price: "$6.42", change: "+3.21%", mcap: "$4.8B", mcapValue: 4800000000, chain: "ethereum", address: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984", move1h: "+0.7%", move6h: "+2.1%", move24h: "+3.21%" },
+            { name: "Chainlink", symbol: "LINK", price: "$12.34", change: "+5.67%", mcap: "$7.2B", mcapValue: 7200000000, chain: "ethereum", address: "0x514910771af9ca656af840dff83e8264ecf986ca", move1h: "+1.2%", move6h: "+3.8%", move24h: "+5.67%" },
+            { name: "Polygon", symbol: "MATIC", price: "$0.52", change: "-1.45%", mcap: "$5.2B", mcapValue: 5200000000, chain: "ethereum", address: "0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0", move1h: "+0.3%", move6h: "-0.8%", move24h: "-1.45%" },
+            { name: "Solana", symbol: "SOL", price: "$98.76", change: "+6.78%", mcap: "$45.2B", mcapValue: 45200000000, chain: "solana", address: "So11111111111111111111111111111111111111112", move1h: "+1.4%", move6h: "+4.2%", move24h: "+6.78%" },
+            { name: "Cardano", symbol: "ADA", price: "$0.345", change: "-0.56%", mcap: "$12.1B", mcapValue: 12100000000, chain: "ethereum", address: "0x3ee2200efb3400fabb9aacf31297cbdd1d435d47", move1h: "+0.1%", move6h: "-0.3%", move24h: "-0.56%" },
+            { name: "Dogecoin", symbol: "DOGE", price: "$0.067", change: "+4.21%", mcap: "$9.8B", mcapValue: 9800000000, chain: "ethereum", address: "0x4206931337dc273a630d328da6441786bfad668f", move1h: "+1.1%", move6h: "+2.8%", move24h: "+4.21%" },
+            { name: "Aave", symbol: "AAVE", price: "$89.12", change: "+2.45%", mcap: "$1.3B", mcapValue: 1300000000, address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9", chain: "ethereum", move1h: "+0.5%", move6h: "+1.8%", move24h: "+2.45%" },
+            { name: "Compound", symbol: "COMP", price: "$67.89", change: "-1.23%", mcap: "$890M", mcapValue: 890000000, address: "0xc00e94cb662c3520282e6f5717214004a7f26888", chain: "ethereum", move1h: "-0.3%", move6h: "-0.8%", move24h: "-1.23%" },
+            { name: "MakerDAO", symbol: "MKR", price: "$1,456", change: "+1.67%", mcap: "$1.4B", mcapValue: 1400000000, address: "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2", chain: "ethereum", move1h: "+0.4%", move6h: "+1.1%", move24h: "+1.67%" },
+            { name: "Curve", symbol: "CRV", price: "$0.34", change: "-2.11%", mcap: "$340M", mcapValue: 340000000, address: "0xd533a949740bb3306d119cc777fa900ba034cd52", chain: "ethereum", move1h: "-0.5%", move6h: "-1.2%", move24h: "-2.11%" },
+            { name: "SushiSwap", symbol: "SUSHI", price: "$1.23", change: "+3.45%", mcap: "$156M", mcapValue: 156000000, address: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2", chain: "ethereum", move1h: "+0.8%", move6h: "+2.1%", move24h: "+3.45%" }
+        ];
+
+        // Market cap filter for trending section
+        let currentMcFilter = 'all';
+
+        // Alerts system
+        let activeAlerts = [];
+        let notificationPermission = false;
+        let alertCheckInterval = null;
+
+        // Initialize notification permissions
+        async function initializeNotifications() {
+            if ('Notification' in window) {
+                if (Notification.permission === 'default') {
+                    const permission = await Notification.requestPermission();
+                    notificationPermission = permission === 'granted';
+                } else {
+                    notificationPermission = Notification.permission === 'granted';
+                }
+                console.log(`🔔 Notification permission: ${notificationPermission ? 'granted' : 'denied'}`);
+            } else {
+                console.warn('❌ Browser does not support notifications');
+            }
+        }
+
+        // Create new alert
+        function createAlert() {
+            const coinSelect = document.getElementById('alertCoinSelect');
+            const conditionSelect = document.getElementById('alertCondition');
+            const priceInput = document.getElementById('alertPrice');
+            
+            const coin = coinSelect.value;
+            const condition = conditionSelect.value;
+            const targetPrice = parseFloat(priceInput.value);
+            
+            if (!coin) {
+                showToast('Please select a coin', 'error');
+                return;
+            }
+            
+            if (!targetPrice || targetPrice <= 0) {
+                showToast('Please enter a valid price', 'error');
+                return;
+            }
+            
+            // Check if alert already exists
+            const existingAlert = activeAlerts.find(alert => 
+                alert.symbol === coin && 
+                alert.condition === condition && 
+                Math.abs(alert.targetPrice - targetPrice) < 0.01
+            );
+            
+            if (existingAlert) {
+                showToast('This alert already exists', 'error');
+                return;
+            }
+            
+            // Create new alert
+            const newAlert = {
+                id: Date.now().toString(),
+                symbol: coin,
+                condition: condition, // 'above' or 'below'
+                targetPrice: targetPrice,
+                createdAt: new Date().toISOString(),
+                triggered: false
+            };
+            
+            activeAlerts.push(newAlert);
+            
+            // Clear form
+            coinSelect.value = '';
+            priceInput.value = '';
+            
+            // Update display
+            updateAlertsDisplay();
+            
+            showToast(`Alert created: ${coin} ${condition} ${targetPrice.toLocaleString()}`, 'success');
+            
+            // Start monitoring if not already started
+            if (!alertCheckInterval && wsConnected) {
+                startAlertMonitoring();
+            }
+            
+            console.log(`✅ Created alert: ${coin} ${condition} ${targetPrice}`);
+        }
+
+        // Delete alert
+        function deleteAlert(alertId) {
+            activeAlerts = activeAlerts.filter(alert => alert.id !== alertId);
+            updateAlertsDisplay();
+            showToast('Alert deleted', 'success');
+            
+            // Stop monitoring if no alerts
+            if (activeAlerts.length === 0 && alertCheckInterval) {
+                clearInterval(alertCheckInterval);
+                alertCheckInterval = null;
+            }
+        }
+
+        // Update alerts display
+        function updateAlertsDisplay() {
+            const alertsList = document.getElementById('alertsList');
+            
+            if (activeAlerts.length === 0) {
+                alertsList.innerHTML = '<div class="no-data" style="padding: 20px; font-size: 0.8rem;">No active alerts</div>';
+                return;
+            }
+            
+            const alertsHTML = activeAlerts.map(alert => {
+                const currentPrice = marketCapData.has(alert.symbol) 
+                    ? marketCapData.get(alert.symbol).price 
+                    : 'N/A';
+                
+                const conditionText = alert.condition === 'above' ? '>' : '<';
+                const triggeredClass = alert.triggered ? 'alert-triggered' : '';
+                
+                return `
+                    <div class="alert-item ${triggeredClass}">
+                        <div class="alert-details">
+                            <div class="alert-symbol">${alert.symbol}</div>
+                            <div class="alert-condition">Alert when ${conditionText} ${alert.targetPrice.toLocaleString()}</div>
+                            <div class="alert-current-price">Current: ${currentPrice}</div>
+                        </div>
+                        <div class="alert-actions">
+                            <button class="alert-delete" onclick="deleteAlert('${alert.id}')">×</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            alertsList.innerHTML = alertsHTML;
+        }
+
+        // Start alert monitoring
+        function startAlertMonitoring() {
+            if (alertCheckInterval) {
+                clearInterval(alertCheckInterval);
+            }
+            
+            alertCheckInterval = setInterval(() => {
+                checkAlerts();
+            }, 5000); // Check every 5 seconds
+            
+            console.log('🔔 Started alert monitoring');
+        }
+
+        // Stop alert monitoring
+        function stopAlertMonitoring() {
+            if (alertCheckInterval) {
+                clearInterval(alertCheckInterval);
+                alertCheckInterval = null;
+                console.log('🔕 Stopped alert monitoring');
+            }
+        }
+
+        // Check alerts against current prices
+        function checkAlerts() {
+            if (!wsConnected || activeAlerts.length === 0) {
+                return;
+            }
+            
+            activeAlerts.forEach(alert => {
+                if (alert.triggered) return; // Skip already triggered alerts
+                
+                const currentData = marketCapData.get(alert.symbol);
+                if (!currentData || !currentData.price) return;
+                
+                // Extract numeric price (remove $ and commas)
+                const currentPrice = parseFloat(currentData.price.replace(/[$,]/g, ''));
+                if (isNaN(currentPrice)) return;
+                
+                let shouldTrigger = false;
+                
+                if (alert.condition === 'above' && currentPrice >= alert.targetPrice) {
+                    shouldTrigger = true;
+                } else if (alert.condition === 'below' && currentPrice <= alert.targetPrice) {
+                    shouldTrigger = true;
+                }
+                
+                if (shouldTrigger) {
+                    triggerAlert(alert, currentPrice);
+                }
+            });
+        }
+
+        // Trigger an alert
+        function triggerAlert(alert, currentPrice) {
+            alert.triggered = true;
+            alert.triggeredAt = new Date().toISOString();
+            alert.triggeredPrice = currentPrice;
+            
+            const conditionText = alert.condition === 'above' ? 'above' : 'below';
+            const message = `${alert.symbol} is now ${conditionText} ${alert.targetPrice.toLocaleString()}! Current price: ${currentPrice.toLocaleString()}`;
+            
+            // Send browser notification
+            if (notificationPermission) {
+                const notification = new Notification('🔔 Price Alert Triggered!', {
+                    body: message,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔔</text></svg>',
+                    requireInteraction: true,
+                    tag: `alert-${alert.id}`
+                });
+                
+                // Close notification after 10 seconds
+                setTimeout(() => {
+                    notification.close();
+                }, 10000);
+                
+                // Optional: Add click handler to focus window
+                notification.onclick = function() {
+                    window.focus();
+                    this.close();
+                };
+            }
+            
+            // Show toast notification
+            showToast(message, 'success', true);
+            
+            // Update display
+            updateAlertsDisplay();
+            
+            // Auto-remove triggered alert after 30 seconds
+            setTimeout(() => {
+                deleteAlert(alert.id);
+            }, 30000);
+            
+            console.log(`🔔 Alert triggered: ${message}`);
+        }
+
+        // Add coin to alert selector from trending/search
+        function addCoinToAlertSelector(symbol, name) {
+            const alertCoinSelect = document.getElementById('alertCoinSelect');
+            const existingOption = Array.from(alertCoinSelect.options).find(option => option.value === symbol);
+            
+            if (!existingOption) {
+                const option = document.createElement('option');
+                option.value = symbol;
+                option.textContent = `${name} (${symbol})`;
+                alertCoinSelect.appendChild(option);
+                console.log(`➕ Added ${symbol} to alert selector`);
+            }
+        }
+
+        // Minimal toast function - only show essential notifications
+        let lastToastMessage = '';
+        let lastToastTime = 0;
+        
+        function showToast(message, type = 'success', force = false) {
+            const now = Date.now();
+            
+            // Only show essential toasts unless forced
+            const essentialMessages = [
+                'All 6 charts are pinned',
+                'Terminal ready',
+                'Live data connected',
+                'WebSocket connection failed',
+                'Error loading terminal'
+            ];
+            
+            const isEssential = essentialMessages.some(essential => message.includes(essential));
+            
+            if (!force && !isEssential) {
+                return; // Skip non-essential toasts
+            }
+            
+            // Prevent duplicate messages within 3 seconds
+            if (message === lastToastMessage && (now - lastToastTime) < 3000) {
+                return;
+            }
+            
+            displayToast(message, type);
+            lastToastMessage = message;
+            lastToastTime = now;
+        }
+        
+        function displayToast(message, type) {
+            console.log(`Toast: ${message}`);
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        // X.com Mentions Functions - using backend API
+        async function fetchXMentions() {
+            try {
+                console.log(`🐦 Fetching X.com mentions from backend (${currentMentionType})...`);
+                
+                const searchQueries = getSearchQueries(currentMentionType);
+                const symbols = searchQueries.map(q => q.symbol).join(',');
+                
+                const response = await fetch(`${API_BASE_URL}/api/x-mentions?symbols=${symbols}`);
+                
+                if (response.status === 429) {
+                    const result = await response.json();
+                    displayRateLimitMessage(result);
+                    return;
+                } else if (!response.ok) {
+                    throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    xMentionsData = result.data;
+                    updateXMentionsDisplay();
+                    console.log(`✅ Loaded ${xMentionsData.length} real X.com mentions from backend`);
+                } else if (result.rateLimited) {
+                    displayRateLimitMessage(result);
+                } else {
+                    throw new Error('Invalid API response format');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error fetching X.com mentions from backend:', error);
+                
+                if (error.message.includes('Failed to fetch')) {
+                    displayBackendConnectionError();
+                } else {
+                    // Show error message instead of fake data
+                    const mentionsList = document.getElementById('xMentionsList');
+                    mentionsList.innerHTML = `
+                        <div class="no-data" style="padding: 15px; text-align: center;">
+                            <div style="margin-bottom: 10px;">❌ <strong>API Error</strong></div>
+                            <div style="font-size: 0.7rem; color: #7d8590; margin-bottom: 10px;">
+                                ${error.message}
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <button onclick="fetchXMentions()" style="background: #58a6ff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        async function fetchDirectXApi() {
+            const testUrl = `${X_API_BASE}/tweets/counts/recent?query=Bitcoin&granularity=hour`;
+            
+            const response = await fetch(testUrl, {
+                headers: {
+                    'Authorization': `Bearer ${X_BEARER_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`X API error: ${response.status}`);
+            }
+            
+            return await response.json();
+        }
+
+        async function searchXMentions(symbol, searchTerm) {
+            const url = new URL(`${X_API_BASE}/tweets/counts/recent`);
+            url.searchParams.set('query', searchTerm);
+            url.searchParams.set('granularity', 'hour');
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${X_BEARER_TOKEN}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`X API error: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // Sum up tweet counts from the last 24 hours
+            const totalMentions = data.data?.reduce((sum, hour) => sum + hour.tweet_count, 0) || 0;
+            
+            console.log(`📊 ${symbol}: ${totalMentions} mentions in last 24h`);
+            return totalMentions;
+        }
+
+        function getSearchQueries(mentionType) {
+            const allCoins = [
+                { symbol: 'BTC', name: 'Bitcoin', dexScreenerListed: true },
+                { symbol: 'ETH', name: 'Ethereum', dexScreenerListed: true },
+                { symbol: 'PEPE', name: 'Pepe', dexScreenerListed: true },
+                { symbol: 'SHIB', name: 'Shiba Inu', dexScreenerListed: true },
+                { symbol: 'DOGE', name: 'Dogecoin', dexScreenerListed: false },
+                { symbol: 'SOL', name: 'Solana', dexScreenerListed: true },
+                { symbol: 'ADA', name: 'Cardano', dexScreenerListed: false },
+                { symbol: 'LINK', name: 'Chainlink', dexScreenerListed: true },
+                { symbol: 'UNI', name: 'Uniswap', dexScreenerListed: true },
+                { symbol: 'MATIC', name: 'Polygon', dexScreenerListed: true },
+                { symbol: 'AAVE', name: 'Aave', dexScreenerListed: true },
+                { symbol: 'CRV', name: 'Curve', dexScreenerListed: true }
+            ];
+            
+            const coins = mentionType === 'dexscreener' 
+                ? allCoins.filter(coin => coin.dexScreenerListed)
+                : allCoins;
+            
+            return coins.map(coin => ({
+                ...coin,
+                searchTerm: `($${coin.symbol} OR ${coin.name}) -is:retweet lang:en`
+            }));
+        }
+
+        function displayXApiSetupMessage() {
+            const mentionsList = document.getElementById('xMentionsList');
+            mentionsList.innerHTML = `
+                <div class="no-data" style="padding: 15px; text-align: center;">
+                    <div style="margin-bottom: 10px;">🔑 <strong>X API Setup Required</strong></div>
+                    <div style="font-size: 0.7rem; color: #7d8590; margin-bottom: 10px;">
+                        To show real X.com mentions, add your free X API Bearer Token
+                    </div>
+                    <div style="font-size: 0.65rem; color: #58a6ff;">
+                        1. Get free token at <strong>developer.twitter.com</strong><br>
+                        2. Add token to X_BEARER_TOKEN variable<br>
+                        3. Refresh to see real mentions
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button onclick="showXApiInstructions()" style="background: #1da1f2; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                            Setup Instructions
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayCorsExplanation() {
+            const mentionsList = document.getElementById('xMentionsList');
+            mentionsList.innerHTML = `
+                <div class="no-data" style="padding: 15px; text-align: center;">
+                    <div style="margin-bottom: 10px;">🚨 <strong>CORS Issue Detected</strong></div>
+                    <div style="font-size: 0.7rem; color: #7d8590; margin-bottom: 10px;">
+                        X.com API cannot be called directly from browsers due to CORS policy
+                    </div>
+                    <div style="font-size: 0.65rem; color: #f85149; margin-bottom: 8px;">
+                        <strong>This is normal!</strong> X API requires a backend server.
+                    </div>
+                    <div style="font-size: 0.65rem; color: #58a6ff;">
+                        <strong>Solutions:</strong><br>
+                        1. Use with a backend server (Node.js/Python)<br>
+                        2. Deploy to Vercel/Netlify with serverless functions<br>
+                        3. Use alternative APIs (Reddit, News APIs)
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button onclick="showCorsWorkarounds()" style="background: #f85149; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                            Show Solutions
+                        </button>
+                        <button onclick="useFallbackData()" style="background: #238636; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; margin-left: 5px;">
+                            Use Demo Data
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showCorsWorkarounds() {
+            alert(`🔧 WORKAROUNDS FOR X.com API:
+
+🚨 PROBLEM: Browsers block direct X API calls (CORS policy)
+
+✅ SOLUTIONS:
+
+1. BACKEND SERVER (Recommended):
+   - Create Node.js/Python server
+   - Server calls X API, serves data to frontend
+   - Deploy on Vercel/Railway/Heroku
+
+2. SERVERLESS FUNCTIONS:
+   - Vercel/Netlify functions
+   - Cloudflare Workers
+   - Call X API from server-side function
+
+3. ALTERNATIVE FREE APIs:
+   - Reddit API (r/cryptocurrency mentions)
+   - NewsAPI (crypto news mentions)
+   - CryptoPanic API (social sentiment)
+   - Coindar API (social activity)
+
+4. PROXY SERVICES:
+   - cors-anywhere.herokuapp.com (limited)
+   - allorigins.hexlet.app (limited)
+
+The X API itself is free, but needs backend!`);
+        }
+
+        function displayBackendConnectionError() {
+            const mentionsList = document.getElementById('xMentionsList');
+            mentionsList.innerHTML = `
+                <div class="no-data" style="padding: 15px; text-align: center;">
+                    <div style="margin-bottom: 10px;">🔌 <strong>Backend Server Offline</strong></div>
+                    <div style="font-size: 0.7rem; color: #7d8590; margin-bottom: 10px;">
+                        Cannot connect to the X.com API backend server
+                    </div>
+                    <div style="font-size: 0.65rem; color: #f85149; margin-bottom: 8px;">
+                        <strong>Current URL:</strong> ${API_BASE_URL}
+                    </div>
+                    <div style="font-size: 0.65rem; color: #58a6ff;">
+                        <strong>Solutions:</strong><br>
+                        1. Start local server: <code>npm start</code><br>
+                        2. Check DigitalOcean app deployment<br>
+                        3. Update API_BASE_URL in frontend
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button onclick="testBackendConnection()" style="background: #1da1f2; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                            Test Connection
+                        </button>
+                        <button onclick="useFallbackData()" style="background: #238636; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; margin-left: 5px;">
+                            Use Demo Data
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function testBackendConnection() {
+            try {
+                console.log(`🔍 Testing connection to ${API_BASE_URL}...`);
+                const response = await fetch(`${API_BASE_URL}/api`);
+                const data = await response.json();
+                
+                if (data.status === 'OK') {
+                    alert(`✅ Backend Connected!\n\nServer: ${data.message}\nEndpoints: ${data.endpoints.join(', ')}`);
+                    fetchXMentions(); // Retry fetching mentions
+                } else {
+                    alert(`❌ Backend responded but with unexpected format:\n${JSON.stringify(data)}`);
+                }
+            } catch (error) {
+                alert(`❌ Connection Failed:\n${error.message}\n\nCheck if your server is running at:\n${API_BASE_URL}`);
+            }
+        }
+
+        function useFallbackData() {
+            console.log('🔄 Switching to demo data...');
+            const mockData = generateMockXMentions();
+            xMentionsData = currentMentionType === 'dexscreener' 
+                ? mockData.filter(item => item.dexScreenerListed)
+                : mockData;
+            updateXMentionsDisplay();
+            console.log('📊 Now showing demo data');
+        }
+
+        let rateLimitCountdownInterval = null;
+
+        function displayRateLimitMessage(rateLimitInfo) {
+            const mentionsList = document.getElementById('xMentionsList');
+            const resetTime = new Date(rateLimitInfo.resetTime);
+            
+            // Clear any existing countdown
+            if (rateLimitCountdownInterval) {
+                clearInterval(rateLimitCountdownInterval);
+            }
+            
+            // Initial display
+            updateRateLimitDisplay(rateLimitInfo.resetInSeconds);
+            
+            // Update countdown every second
+            let remainingSeconds = rateLimitInfo.resetInSeconds;
+            rateLimitCountdownInterval = setInterval(() => {
+                remainingSeconds--;
+                if (remainingSeconds <= 0) {
+                    clearInterval(rateLimitCountdownInterval);
+                    // Try to refresh data automatically
+                    fetchXMentions();
+                    return;
+                }
+                updateRateLimitDisplay(remainingSeconds);
+            }, 1000);
+
+            function updateRateLimitDisplay(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                const timeString = `${minutes}:${secs.toString().padStart(2, '0')}`;
+                
+                mentionsList.innerHTML = `
+                    <div class="no-data" style="padding: 20px; text-align: center;">
+                        <div style="margin-bottom: 15px;">⏰ <strong>Rate Limited</strong></div>
+                        <div style="font-size: 0.8rem; color: #7d8590; margin-bottom: 10px;">
+                            X.com API limit exceeded (300 requests per 15 minutes)
+                        </div>
+                        <div style="font-size: 1.2rem; color: #58a6ff; margin-bottom: 15px; font-family: monospace;">
+                            <strong>${timeString}</strong>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #c9d1d9; margin-bottom: 15px;">
+                            Please check back when the timer reaches 0:00
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <button onclick="fetchXMentions()" style="background: #58a6ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                                Check Now
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function showXApiInstructions() {
+            alert(`🔑 X API FREE SETUP (2 minutes):
+
+1. Go to developer.twitter.com
+2. Apply for Essential access (instant approval)
+3. Create a new App
+4. Copy your Bearer Token
+5. Replace 'null' with your token in the code:
+   const X_BEARER_TOKEN = "your_token_here";
+
+FREE TIER LIMITS:
+✅ 2M tweet reads/month
+✅ Real-time search
+✅ Tweet counts API
+✅ Perfect for coin mentions!
+
+The setup is free and takes 2 minutes!`);
+        }
+
+        function isDexScreenerListed(symbol) {
+            const dexTokens = ['BTC', 'ETH', 'PEPE', 'SHIB', 'UNI', 'LINK', 'AAVE', 'CRV', 'SUSHI', 'COMP', 'MKR', 'SOL', 'MATIC'];
+            return dexTokens.includes(symbol.toUpperCase());
+        }
+
+        function generateMockXMentions() {
+            const coins = [
+                { symbol: 'BTC', name: 'Bitcoin', dexScreenerListed: true },
+                { symbol: 'ETH', name: 'Ethereum', dexScreenerListed: true },
+                { symbol: 'PEPE', name: 'Pepe', dexScreenerListed: true },
+                { symbol: 'SHIB', name: 'Shiba Inu', dexScreenerListed: true },
+                { symbol: 'DOGE', name: 'Dogecoin', dexScreenerListed: false },
+                { symbol: 'SOL', name: 'Solana', dexScreenerListed: true },
+                { symbol: 'ADA', name: 'Cardano', dexScreenerListed: false },
+                { symbol: 'LINK', name: 'Chainlink', dexScreenerListed: true },
+                { symbol: 'UNI', name: 'Uniswap', dexScreenerListed: true },
+                { symbol: 'MATIC', name: 'Polygon', dexScreenerListed: true }
+            ];
+
+            return coins.map(coin => ({
+                symbol: coin.symbol,
+                name: coin.name,
+                mentions: Math.floor(Math.random() * 500) + 50,
+                trend: Math.random() > 0.5 ? 'up' : 'down',
+                trendValue: (Math.random() * 50).toFixed(1),
+                dexScreenerListed: coin.dexScreenerListed
+            })).sort((a, b) => b.mentions - a.mentions);
+        }
+
+        function updateXMentionsDisplay() {
+            const mentionsList = document.getElementById('xMentionsList');
+            
+            if (!xMentionsData || xMentionsData.length === 0) {
+                mentionsList.innerHTML = '<div class="no-data">No mentions found</div>';
+                return;
+            }
+
+            const mentionsHtml = xMentionsData.map(mention => {
+                const dataSource = mention.cached ? '📦 Cached' : '🔴 Live';
+                
+                return `
+                <div class="mention-item" onclick="addTokenChart('${mention.symbol}', '${mention.name}', 'N/A', '0%')">
+                    <div class="mention-header">
+                        <span class="mention-coin">${mention.symbol}</span>
+                        <span class="mention-count">${mention.mentions} mentions</span>
+                        <span class="data-source">${dataSource}</span>
+                    </div>
+                    <div class="mention-trend ${mention.trend}">
+                        ${mention.trend === 'up' ? '↗' : '↘'} ${mention.trendValue}% (24h)
+                        ${mention.yesterdayMentions ? ` (vs ${mention.yesterdayMentions})` : ''}
+                    </div>
+                </div>
+            `}).join('');
+
+            mentionsList.innerHTML = mentionsHtml;
+        }
+
+        function toggleMentionType(type) {
+            currentMentionType = type;
+            
+            // Update button states
+            document.getElementById('globalBtn').classList.toggle('active', type === 'global');
+            document.getElementById('dexscreenerBtn').classList.toggle('active', type === 'dexscreener');
+            
+            console.log(`🔄 Switched to ${type} mentions`);
+            fetchXMentions();
+        }
+
+        function refreshXMentions() {
+            console.log('🔄 Refreshing X.com mentions...');
+            document.getElementById('xMentionsList').innerHTML = 
+                '<div class="no-data">🔄 Loading trending mentions from X.com...</div>';
+            fetchXMentions();
+        }
+
+        function startXMentionsPolling() {
+            // Only fetch on initial load - no automatic polling
+            fetchXMentions();
+            console.log('✅ X.com mentions loaded on-demand (no background polling)');
+        }
+
+        function stopXMentionsPolling() {
+            // No background polling to stop
+            console.log('⏹️ No background polling to stop');
+        }
+
+        // Fetch trending pairs from CoinGecko and verify on DexScreener
+        async function fetchCoinGeckoTrendingWithDexVerification() {
+            try {
+                const cacheKey = 'coingecko_trending_dex_verified';
+                const now = Date.now();
+                
+                // Cache trending data for 5 minutes
+                if (trendingCache.has(cacheKey) && (now - lastTrendingUpdate) < 300000) {
+                    console.log('📋 Using cached CoinGecko trending data');
+                    return trendingCache.get(cacheKey);
+                }
+
+                console.log('🔍 Fetching trending tokens from CoinGecko...');
+                
+                // Fetch trending from CoinGecko
+                const trendingResponse = await fetch(`${COINGECKO_BASE_URL}/search/trending`, {
+                    headers: { 'Accept': 'application/json' },
+                    mode: 'cors'
+                });
+
+                if (!trendingResponse.ok) {
+                    throw new Error(`CoinGecko trending API failed: ${trendingResponse.status}`);
+                }
+
+                const trendingData = await trendingResponse.json();
+                console.log('📊 CoinGecko trending response:', trendingData);
+
+                if (!trendingData.coins || !Array.isArray(trendingData.coins)) {
+                    throw new Error('Invalid CoinGecko trending response format');
+                }
+
+                console.log(`✅ Found ${trendingData.coins.length} trending coins from CoinGecko`);
+
+                // Process trending coins and verify on DexScreener
+                const verifiedTrendingPairs = [];
+                
+                for (let i = 0; i < Math.min(trendingData.coins.length, 15); i++) {
+                    const coin = trendingData.coins[i].item;
+                    
+                    try {
+                        console.log(`🔍 Verifying ${coin.symbol} on DexScreener...`);
+                        
+                        // Search for the coin on DexScreener
+                        const dexVerification = await verifyTokenOnDexScreener(coin.symbol, coin.name, coin.id);
+                        
+                        if (dexVerification) {
+                            console.log(`✅ ${coin.symbol} verified on DexScreener`);
+                            
+                            verifiedTrendingPairs.push({
+                                rank: i + 1,
+                                name: coin.name,
+                                symbol: coin.symbol.toUpperCase(),
+                                address: dexVerification.address || '',
+                                chain: dexVerification.chain || 'ethereum',
+                                price: dexVerification.price || 'N/A',
+                                change: dexVerification.change || 'N/A',
+                                mcap: dexVerification.mcap || formatMarketCap(coin.market_cap_rank ? coin.market_cap_rank * 1000000 : 0),
+                                mcapValue: dexVerification.mcapValue || (coin.market_cap_rank ? coin.market_cap_rank * 1000000 : 0),
+                                volume24h: dexVerification.volume24h || 0,
+                                volumeDisplay: dexVerification.volumeDisplay || 'N/A',
+                                pairAddress: dexVerification.pairAddress || '',
+                                source: 'CoinGecko + DexScreener Verified',
+                                coingeckoId: coin.id,
+                                coingeckoRank: coin.market_cap_rank || i + 1
+                            });
+                        } else {
+                            console.log(`❌ ${coin.symbol} not found on DexScreener, skipping`);
+                        }
+                        
+                        // Small delay to avoid rate limiting
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                        
+                    } catch (error) {
+                        console.warn(`❌ Failed to verify ${coin.symbol} on DexScreener:`, error.message);
+                        continue;
+                    }
+                }
+
+                // If we don't have enough verified pairs, add some popular ones from our database
+                if (verifiedTrendingPairs.length < 10) {
+                    console.log('📋 Adding popular tokens from database to fill trending list...');
+                    
+                    const popularTokens = tokenDatabase
+                        .filter(token => !verifiedTrendingPairs.some(verified => verified.symbol === token.symbol))
+                        .slice(0, 10 - verifiedTrendingPairs.length)
+                        .map((token, index) => ({
+                            rank: verifiedTrendingPairs.length + index + 1,
+                            name: token.name,
+                            symbol: token.symbol,
+                            address: token.address,
+                            chain: token.chain,
+                            price: token.price,
+                            change: token.change,
+                            mcap: token.mcap,
+                            mcapValue: token.mcapValue,
+                            volume24h: 0,
+                            volumeDisplay: 'N/A',
+                            pairAddress: '',
+                            source: 'Popular Database Entry'
+                        }));
+                    
+                    verifiedTrendingPairs.push(...popularTokens);
+                }
+
+                console.log(`✅ Final trending list: ${verifiedTrendingPairs.length} verified pairs`);
+                
+                trendingCache.set(cacheKey, verifiedTrendingPairs);
+                lastTrendingUpdate = now;
+                
+                return verifiedTrendingPairs;
+                
+            } catch (error) {
+                console.error('❌ CoinGecko trending fetch failed:', error.message);
+                throw error;
+            }
+        }
+
+        // Verify if a token exists on DexScreener
+        async function verifyTokenOnDexScreener(symbol, name, coingeckoId) {
+            try {
+                // Try searching by symbol first
+                const searchResponse = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${encodeURIComponent(symbol)}`, {
+                    headers: { 'Accept': 'application/json' },
+                    mode: 'cors'
+                });
+
+                if (!searchResponse.ok) {
+                    throw new Error(`DexScreener search failed: ${searchResponse.status}`);
+                }
+
+                const searchData = await searchResponse.json();
+                
+                if (searchData.pairs && searchData.pairs.length > 0) {
+                    // Find the best matching pair
+                    const bestMatch = searchData.pairs.find(pair => 
+                        pair.baseToken && 
+                        pair.baseToken.symbol && 
+                        pair.baseToken.symbol.toLowerCase() === symbol.toLowerCase()
+                    ) || searchData.pairs[0];
+
+                    if (bestMatch && bestMatch.baseToken) {
+                        return {
+                            address: bestMatch.baseToken.address,
+                            chain: bestMatch.chainId || 'ethereum',
+                            price: bestMatch.priceUsd ? `$${parseFloat(bestMatch.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}` : 'N/A',
+                            change: bestMatch.priceChange?.h24 ? `${bestMatch.priceChange.h24 >= 0 ? '+' : ''}${bestMatch.priceChange.h24.toFixed(2)}%` : 'N/A',
+                            mcap: bestMatch.marketCap ? formatMarketCap(bestMatch.marketCap) : 'N/A',
+                            mcapValue: bestMatch.marketCap || 0,
+                            volume24h: bestMatch.volume?.h24 || 0,
+                            volumeDisplay: formatMarketCap(bestMatch.volume?.h24 || 0),
+                            pairAddress: bestMatch.pairAddress || ''
+                        };
+                    }
+                }
+
+                // If symbol search fails, try searching by name
+                if (name && name !== symbol) {
+                    const nameSearchResponse = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${encodeURIComponent(name)}`, {
+                        headers: { 'Accept': 'application/json' },
+                        mode: 'cors'
+                    });
+
+                    if (nameSearchResponse.ok) {
+                        const nameSearchData = await nameSearchResponse.json();
+                        
+                        if (nameSearchData.pairs && nameSearchData.pairs.length > 0) {
+                            const nameMatch = nameSearchData.pairs.find(pair => 
+                                pair.baseToken && 
+                                (pair.baseToken.name?.toLowerCase().includes(name.toLowerCase()) ||
+                                 pair.baseToken.symbol?.toLowerCase() === symbol.toLowerCase())
+                            ) || nameSearchData.pairs[0];
+
+                            if (nameMatch && nameMatch.baseToken) {
+                                return {
+                                    address: nameMatch.baseToken.address,
+                                    chain: nameMatch.chainId || 'ethereum',
+                                    price: nameMatch.priceUsd ? `$${parseFloat(nameMatch.priceUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}` : 'N/A',
+                                    change: nameMatch.priceChange?.h24 ? `${nameMatch.priceChange.h24 >= 0 ? '+' : ''}${nameMatch.priceChange.h24.toFixed(2)}%` : 'N/A',
+                                    mcap: nameMatch.marketCap ? formatMarketCap(nameMatch.marketCap) : 'N/A',
+                                    mcapValue: nameMatch.marketCap || 0,
+                                    volume24h: nameMatch.volume?.h24 || 0,
+                                    volumeDisplay: formatMarketCap(nameMatch.volume?.h24 || 0),
+                                    pairAddress: nameMatch.pairAddress || ''
+                                };
+                            }
+                        }
+                    }
+                }
+
+                return null; // Not found on DexScreener
+                
+            } catch (error) {
+                console.warn(`DexScreener verification failed for ${symbol}:`, error.message);
+                return null;
+            }
+        }
+
+        // Load trending data and display
+        async function loadTrendingData() {
+            const trendingList = document.getElementById('trendingList');
+            
+            try {
+                // Show loading state
+                trendingList.innerHTML = '<div class="no-data">🔄 Loading trending tokens from CoinGecko...</div>';
+                
+                // Fetch trending data from CoinGecko with DexScreener verification
+                const trendingData = await fetchCoinGeckoTrendingWithDexVerification();
+                
+                if (!trendingData || trendingData.length === 0) {
+                    throw new Error('No verified trending pairs received');
+                }
+                
+                console.log('🔍 Final trending data sample:', trendingData.slice(0, 3));
+                
+                allTrendingData = trendingData;
+                displayFilteredTrending();
+                
+                console.log('✅ CoinGecko trending data loaded and verified on DexScreener');
+                
+                // Start auto-refresh every 10 minutes (longer interval due to verification process)
+                if (!trendingUpdateInterval) {
+                    trendingUpdateInterval = setInterval(() => {
+                        refreshTrendingData();
+                    }, 600000); // 10 minutes
+                }
+                
+            } catch (error) {
+                console.error('❌ Failed to load trending data:', error.message);
+                
+                let errorMessage = '❌ Failed to load trending pairs';
+                if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = '🌐 Network error - check connection';
+                } else if (error.message.includes('429')) {
+                    errorMessage = '⏳ Rate limit exceeded - try again later';
+                }
+                
+                trendingList.innerHTML = `<div class="no-data" style="color: #f85149;">${errorMessage}</div>`;
+            }
+        }
+
+        // Refresh trending data manually
+        async function refreshTrendingData() {
+            console.log('🔄 Refreshing trending data from CoinGecko...');
+            
+            // Clear cache to force fresh data
+            trendingCache.clear();
+            lastTrendingUpdate = 0;
+            
+            await loadTrendingData();
+        }
+
+        // Display filtered trending data with safety checks
+        function displayFilteredTrending() {
+            const trendingList = document.getElementById('trendingList');
+            
+            if (allTrendingData.length === 0) {
+                trendingList.innerHTML = '<div class="no-data">🔄 Loading trending pairs...</div>';
+                return;
+            }
+            
+            console.log('🔍 Displaying trending data. Sample item check:', {
+                firstItem: allTrendingData[0],
+                name: allTrendingData[0]?.name,
+                symbol: allTrendingData[0]?.symbol,
+                totalItems: allTrendingData.length
+            });
+            
+            let filteredData = allTrendingData;
+            
+            if (currentMcFilter !== 'all') {
+                filteredData = allTrendingData.filter(pair => {
+                    const mcapValue = pair.mcapValue || 0;
+                    switch (currentMcFilter) {
+                        case 'large': return mcapValue >= 1000000000; // $1B+
+                        case 'mid': return mcapValue >= 100000000 && mcapValue < 1000000000; // $100M-$1B
+                        case 'small': return mcapValue >= 10000000 && mcapValue < 100000000; // $10M-$100M
+                        default: return true;
+                    }
+                });
+            }
+            
+            if (filteredData.length === 0) {
+                trendingList.innerHTML = '<div class="no-data" style="color: #7d8590;">No pairs match this market cap filter</div>';
+                return;
+            }
+            
+            console.log(`🔍 About to render ${filteredData.length} items. First item for display:`, {
+                name: filteredData[0]?.name,
+                symbol: filteredData[0]?.symbol,
+                price: filteredData[0]?.price
+            });
+            
+            const trendingHTML = filteredData.map((pair, index) => {
+                // Extra safety checks and fallbacks
+                const safeName = pair.name && pair.name !== 'Unknown Token' ? pair.name : `Token ${index + 1}`;
+                const safeSymbol = pair.symbol && pair.symbol !== 'UNK' ? pair.symbol : `TKN${index + 1}`;
+                const safePrice = pair.price || 'N/A';
+                const safeChange = pair.change || 'N/A';
+                const safeAddress = pair.address || '';
+                const safeChain = pair.chain || 'ethereum';
+                const safeMcap = pair.mcap || 'N/A';
+                const safePairAddress = pair.pairAddress || '';
+                const safeVolume = pair.volumeDisplay || 'N/A';
+                const safeSource = pair.source || 'CoinGecko + DexScreener';
+                
+                console.log(`Rendering item ${index + 1}: ${safeName} (${safeSymbol}) - ${safeSource}`);
+                
+                return `
+                    <div class="trending-item" onclick="addTokenChart('${safeSymbol}', '${safeName}', '${safePrice}', '${safeChange}', '${safeAddress}', '${safeChain}', '${safeMcap}', '${safePairAddress}')">
+                        <div class="trending-rank">#${pair.rank}</div>
+                        <div class="coin-info">
+                            <div class="coin-name-section">
+                                <div>
+                                    <span class="coin-name" title="${safeName}">${safeName}</span>
+                                    <span class="coin-symbol">${safeSymbol}</span>
+                                    <span class="coin-chain">${safeChain.toUpperCase()}</span>
+                                </div>
+                            </div>
+                            <div class="coin-price-section">
+                                <div class="coin-price-row">
+                                    <span class="coin-price">${safePrice}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="coin-details">
+                            <span class="coin-change ${safeChange.startsWith('+') ? 'positive' : 'negative'}">24h: ${safeChange}</span>
+                            <span class="coin-mcap">MC: ${safeMcap}</span>
+                            <span class="coin-volume">Vol: ${safeVolume}</span>
+                            <span style="font-size: 0.5rem; color: #7d8590; background: #30363d; padding: 1px 4px; border-radius: 3px;">${safeSource.includes('CoinGecko') ? 'CG+DEX' : 'DEX'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            trendingList.innerHTML = trendingHTML;
+            console.log('✅ Trending items rendered to DOM');
+        }
+
+        // Filter trending by market cap
+        function filterByMarketCap(filter) {
+            currentMcFilter = filter;
+            
+            // Update active button
+            document.querySelectorAll('.mc-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter and display data
+            displayFilteredTrending();
+        }
+
+        // Enhanced search setup with mobile optimizations
+        function setupAdvancedSearch() {
+            try {
+                const searchInput = document.getElementById('tokenSearch');
+                const suggestionsDiv = document.getElementById('searchSuggestions');
+
+                if (!searchInput || !suggestionsDiv) {
+                    console.warn('Search elements not found');
+                    return;
+                }
+
+                // Detect if this is a mobile device
+                const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window);
+
+                searchInput.addEventListener('input', function() {
+                    const query = this.value.trim();
+                    
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+
+                    if (query.length < 2) {
+                        suggestionsDiv.style.display = 'none';
+                        return;
+                    }
+
+                    searchTimeout = setTimeout(() => {
+                        try {
+                            performEnhancedSearch(query);
+                        } catch (error) {
+                            console.error('Search error:', error);
+                        }
+                    }, 300);
+                });
+
+                // Enhanced mobile blur handling
+                searchInput.addEventListener('blur', function() {
+                    // Longer delay on mobile to account for slower touch interactions
+                    const delay = isMobile ? 400 : 200;
+                    setTimeout(() => {
+                        suggestionsDiv.style.display = 'none';
+                    }, delay);
+                });
+
+                searchInput.addEventListener('focus', function() {
+                    if (this.value.trim().length >= 2) {
+                        suggestionsDiv.style.display = 'block';
+                    }
+                });
+
+                // Add touch event handlers for mobile
+                if (isMobile) {
+                    suggestionsDiv.addEventListener('touchstart', function(e) {
+                        e.preventDefault(); // Prevent blur from firing immediately
+                    });
+                    
+                    // Close search when touching outside on mobile
+                    document.addEventListener('touchstart', function(e) {
+                        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                            suggestionsDiv.style.display = 'none';
+                        }
+                    });
+                }
+                
+                console.log('✅ Search functionality initialized with mobile optimizations');
+            } catch (error) {
+                console.error('Error setting up search:', error);
+            }
+        }
+
+        // Enhanced search with API integration and fallbacks
+        async function performEnhancedSearch(query) {
+            const suggestionsDiv = document.getElementById('searchSuggestions');
+            
+            // Show loading state
+            suggestionsDiv.innerHTML = '<div class="search-suggestion" style="color: #58a6ff;"><div class="suggestion-name">🔍 Searching...</div></div>';
+            suggestionsDiv.style.display = 'block';
+
+            try {
+                // Try DexScreener API first
+                const apiResults = await searchDexScreenerAPI(query);
+                
+                if (apiResults && apiResults.length > 0) {
+                    displaySearchResults(apiResults, 'API');
+                } else {
+                    // Fallback to local database
+                    const localResults = searchLocalDatabase(query);
+                    displaySearchResults(localResults, 'Local');
+                }
+            } catch (error) {
+                console.log('API search failed, using local search:', error.message);
+                const localResults = searchLocalDatabase(query);
+                displaySearchResults(localResults, 'Local');
+            }
+        }
+
+        // DexScreener API search with timeout
+        async function searchDexScreenerAPI(query) {
+            try {
+                if (searchAbortController) {
+                    searchAbortController.abort();
+                }
+                
+                searchAbortController = new AbortController();
+                
+                const cacheKey = `search_${query.toLowerCase()}`;
+                if (dexScreenerCache.has(cacheKey)) {
+                    return dexScreenerCache.get(cacheKey);
+                }
+
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Search timeout')), 3000);
+                });
+                
+                const fetchPromise = fetch(`https://api.dexscreener.com/latest/dex/search/?q=${encodeURIComponent(query)}`, {
+                    signal: searchAbortController.signal,
+                    headers: { 'Accept': 'application/json' },
+                    mode: 'cors'
+                });
+                
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                const processedResults = data.pairs ? data.pairs.slice(0, 8).map(pair => ({
+                    name: pair.baseToken?.name || 'Unknown Token',
+                    symbol: pair.baseToken?.symbol || 'UNK',
+                    address: pair.baseToken?.address || '',
+                    chain: pair.chainId || 'ethereum',
+                    price: pair.priceUsd ? `$${parseFloat(pair.priceUsd).toLocaleString()}` : 'N/A',
+                    change: pair.priceChange?.h24 ? `${pair.priceChange.h24 >= 0 ? '+' : ''}${pair.priceChange.h24.toFixed(2)}%` : 'N/A',
+                    mcap: pair.marketCap ? formatMarketCap(pair.marketCap) : 'N/A',
+                    mcapValue: pair.marketCap || 0,
+                    volume24h: pair.volume?.h24 || 0,
+                    pairAddress: pair.pairAddress || '',
+                    source: 'DexScreener API'
+                })) : [];
+                
+                dexScreenerCache.set(cacheKey, processedResults);
+                setTimeout(() => dexScreenerCache.delete(cacheKey), 120000);
+                
+                console.log(`✅ Found ${processedResults.length} results from DexScreener API`);
+                return processedResults;
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    return [];
+                }
+                throw error;
+            }
+        }
+
+        // Local database search
+        function searchLocalDatabase(query) {
+            const filteredCoins = tokenDatabase.filter(coin => 
+                coin.name.toLowerCase().includes(query.toLowerCase()) ||
+                coin.symbol.toLowerCase().includes(query.toLowerCase()) ||
+                coin.address.toLowerCase().includes(query.toLowerCase())
+            );
+
+            const exactMatches = filteredCoins.filter(coin => 
+                coin.name.toLowerCase() === query.toLowerCase() ||
+                coin.symbol.toLowerCase() === query.toLowerCase()
+            );
+            
+            const partialMatches = filteredCoins.filter(coin => 
+                !exactMatches.includes(coin)
+            );
+            
+            return [...exactMatches, ...partialMatches].slice(0, 6).map(coin => ({
+                ...coin,
+                source: 'Local Database'
+            }));
+        }
+
+        // Display search results
+        function displaySearchResults(results, source) {
+            const suggestionsDiv = document.getElementById('searchSuggestions');
+            
+            if (results.length === 0) {
+                suggestionsDiv.innerHTML = '<div class="search-suggestion" style="color: #f85149;"><div class="suggestion-name">❌ No results found</div><div class="suggestion-symbol">Try a different search term</div></div>';
+                return;
+            }
+
+            suggestionsDiv.innerHTML = results.map(coin => {
+                const sourceColor = source === 'API' ? '#56d364' : '#7d8590';
+                const volumeDisplay = coin.volume24h ? ` • Vol: ${formatMarketCap(coin.volume24h)}` : '';
+                
+                return `
+                    <div class="search-suggestion" onclick="selectSearchResult('${coin.address}', '${coin.chain}', '${coin.name}', '${coin.symbol}', '${coin.mcap}', '${coin.price}', '${coin.change}', '${coin.pairAddress || ''}')">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <div class="suggestion-name">${coin.name}</div>
+                            <div style="font-size: 0.7rem; color: #58a6ff; font-weight: 500;">${coin.price || 'N/A'}</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="suggestion-symbol">${coin.symbol} • ${coin.chain.toUpperCase()}</div>
+                            <div style="font-size: 0.6rem; color: ${coin.change && coin.change.startsWith('+') ? '#56d364' : '#f85149'};">${coin.change || 'N/A'}</div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                            <div class="suggestion-chain" style="font-size: 0.6rem;">MC: ${coin.mcap || 'N/A'}${volumeDisplay}</div>
+                            <div style="font-size: 0.5rem; color: ${sourceColor};">${source}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Select search result and auto-add chart
+        function selectSearchResult(address, chain, name, symbol, mcap, price, change, pairAddress) {
+            selectedToken = { address, chain, name, symbol, mcap, price, change, pairAddress };
+            document.getElementById('tokenSearch').value = '';
+            document.getElementById('searchSuggestions').style.display = 'none';
+            
+            // Automatically add the chart
+            addTokenChart(symbol, name, price, change, address, chain, mcap, pairAddress);
+        }
+
+        // Format market cap
+        function formatMarketCap(mcap) {
+            if (!mcap || mcap === 0) return 'N/A';
+            
+            if (mcap >= 1e12) {
+                return `${(mcap / 1e12).toFixed(2)}T`;
+            } else if (mcap >= 1e9) {
+                return `${(mcap / 1e9).toFixed(2)}B`;
+            } else if (mcap >= 1e6) {
+                return `${(mcap / 1e6).toFixed(2)}M`;
+            } else if (mcap >= 1e3) {
+                return `${(mcap / 1e3).toFixed(0)}K`;
+            } else {
+                return `${mcap.toLocaleString()}`;
+            }
+        }
+
+        // Enhanced chart URL building
+        function buildDexscreenerUrl(chain, address, timeframeMinutes, symbol, pairAddress = '') {
+            if (symbol === 'BTC' || address === "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599") {
+                // Use WBTC/USDC pair for USD pricing instead of WBTC/ETH
+                return `https://dexscreener.com/ethereum/0x004375dff511095cc5a197a54140a24efef3a416?embed=1&theme=dark&interval=${timeframeMinutes}&trades=0&info=0`;
+            }
+            
+            if (pairAddress && pairAddress !== '' && pairAddress !== 'undefined') {
+                return `https://dexscreener.com/${chain}/${pairAddress}?embed=1&theme=dark&interval=${timeframeMinutes}&trades=0&info=0`;
+            }
+            
+            if (chain === 'solana' || (address && address.length > 42 && address.length < 45)) {
+                return `https://dexscreener.com/solana/${address}?embed=1&theme=dark&interval=${timeframeMinutes}&trades=0&info=0`;
+            }
+            
+            if (address && address !== '' && address !== 'undefined') {
+                const baseUrl = `https://dexscreener.com/${chain}/${address}`;
+                const params = [
+                    'embed=1',
+                    'theme=dark',
+                    `interval=${timeframeMinutes}`,
+                    'trades=0',
+                    'info=0'
+                ].join('&');
+                
+                return `${baseUrl}?${params}`;
+            }
+            
+            return `https://dexscreener.com/${chain}?q=${encodeURIComponent(symbol)}&embed=1&theme=dark&interval=${timeframeMinutes}&trades=0&info=0`;
+        }
+
+        // Chart selection functions
+        function selectChart(chartId) {
+            // Clear any previously selected chart
+            if (selectedChart) {
+                const prevSelected = document.getElementById(selectedChart);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected');
+                }
+            }
+            
+            // If clicking the same chart, deselect it
+            if (selectedChart === chartId) {
+                selectedChart = null;
+                console.log('Chart deselected');
+                return;
+            }
+            
+            // Select the new chart
+            selectedChart = chartId;
+            const chartElement = document.getElementById(chartId);
+            if (chartElement) {
+                chartElement.classList.add('selected');
+                console.log(`Chart selected: ${chartId}`);
+            }
+        }
+
+        // Clear chart selection
+        function clearChartSelection() {
+            if (selectedChart) {
+                const prevSelected = document.getElementById(selectedChart);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected');
+                }
+                selectedChart = null;
+            }
+        }
+
+        // Enhanced add token chart function with selection-based replacement
+        function addTokenChart(symbol, name, price, change, address = '', chain = 'ethereum', mcap = 'N/A', pairAddress = '', isInitialLoad = false) {
+            console.log(`Adding chart for ${symbol}`);
+            
+            const chartsGrid = document.getElementById('chartsGrid');
+            const currentCharts = Array.from(chartsGrid.querySelectorAll('.chart-container'));
+            
+            let insertPosition = null; // Track where to insert the new chart
+            let replacingSelected = false;
+            
+            // If we have a selected chart and we're at capacity, replace the selected one
+            if (selectedChart && currentCharts.length >= 6) {
+                const selectedElement = document.getElementById(selectedChart);
+                if (selectedElement && !pinnedCharts.has(selectedChart)) {
+                    console.log(`Replacing selected chart: ${selectedChart}`);
+                    insertPosition = selectedElement.nextSibling;
+                    selectedElement.remove();
+                    pinnedCharts.delete(selectedChart);
+                    selectedChart = null; // Clear selection after replacement
+                    replacingSelected = true;
+                }
+            }
+            
+            // If not replacing selected chart, use sequential replacement logic
+            if (!replacingSelected && currentCharts.length >= 6) {
+                let replaced = false;
+                
+                // Start from the next position after the last replacement
+                let startIndex = (lastReplacementIndex + 1) % currentCharts.length;
+                
+                // Try to find an unpinned chart starting from the next position
+                for (let i = 0; i < currentCharts.length; i++) {
+                    const index = (startIndex + i) % currentCharts.length;
+                    const chart = currentCharts[index];
+                    
+                    if (!pinnedCharts.has(chart.id)) {
+                        console.log(`Replacing chart at position ${index + 1}: ${chart.id}`);
+                        
+                        // Clear selection if we're replacing the selected chart
+                        if (selectedChart === chart.id) {
+                            selectedChart = null;
+                        }
+                        
+                        // Remember the next sibling to insert before it
+                        insertPosition = chart.nextSibling;
+                        
+                        // Track this replacement position for next time
+                        lastReplacementIndex = index;
+                        
+                        // Remove the chart
+                        chart.remove();
+                        pinnedCharts.delete(chart.id);
+                        replaced = true;
+                        break;
+                    }
+                }
+                
+                if (!replaced) {
+                    showToast('All 6 charts are pinned! Unpin one first.', 'error', true);
+                    return;
+                }
+            }
+            
+            // Generate unique chart ID
+            const chartId = `chart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            const timeframe = document.getElementById('timeframe').value;
+            let minutes;
+            switch(timeframe) {
+                case '1h': minutes = 60; break;
+                case '4h': minutes = 240; break;
+                case '1d': minutes = 1440; break;
+                default: minutes = 240;
+            }
+
+            // Try to find token data for better URL
+            const tokenInfo = tokenDatabase.find(token => token.symbol === symbol) || {};
+            const finalAddress = address || tokenInfo.address || '';
+            const finalChain = chain || tokenInfo.chain || 'ethereum';
+            
+            const chartUrl = buildDexscreenerUrl(finalChain, finalAddress, minutes, symbol, pairAddress);
+            
+            const chartContainer = document.createElement('div');
+            chartContainer.className = 'chart-container';
+            chartContainer.id = chartId;
+            
+            // Add click handler for selection
+            chartContainer.addEventListener('click', function(e) {
+                // Don't trigger selection if clicking on controls
+                if (e.target.closest('.chart-controls')) {
+                    return;
+                }
+                selectChart(chartId);
+            });
+            
+            // Only pin BTC if it's the first chart during initial load, not when manually added
+            const shouldBePinned = (symbol === 'BTC' || symbol === 'WBTC') && isInitialLoad && currentCharts.length === 0;
+            if (shouldBePinned) {
+                chartContainer.classList.add('pinned');
+                pinnedCharts.add(chartId);
+            }
+            
+            // Get price data for pills - minimal when disconnected
+            const tokenData = tokenDatabase.find(t => t.symbol === symbol);
+            let priceDisplay = 'N/A';
+            let mcapDisplay = 'N/A';
+            let move1h = '+0.0%';
+            let move6h = '+0.0%'; 
+            let move24h = '+0.0%';
+            
+            if (wsConnected) {
+                if (marketCapData.has(symbol)) {
+                    const liveData = marketCapData.get(symbol);
+                    priceDisplay = liveData.price;
+                    mcapDisplay = liveData.mcap;
+                    move24h = liveData.change;
+                }
+                if (tokenData) {
+                    move1h = tokenData.move1h || '+0.0%';
+                    move6h = tokenData.move6h || '+0.0%';
+                    mcapDisplay = mcapDisplay || tokenData.mcap || 'N/A';
+                }
+            }
+            // When disconnected, don't show price/MC data from database
+            
+            chartContainer.innerHTML = `
+                <div class="chart-header">
+                    <div class="chart-title-section">
+                        <div class="chart-price-data">
+                            <span class="chart-title" style="margin-right: 8px;">${symbol}</span>
+                            <span class="chart-price">${priceDisplay}</span>
+                            <span class="chart-time-pill ${move1h.startsWith('+') ? 'positive' : 'negative'}">1h: ${move1h}</span>
+                            <span class="chart-time-pill ${move6h.startsWith('+') ? 'positive' : 'negative'}">6h: ${move6h}</span>
+                            <span class="chart-time-pill ${move24h.startsWith('+') ? 'positive' : 'negative'}">24h: ${move24h}</span>
+                        </div>
+                    </div>
+                    <div class="chart-controls">
+                        <button class="chart-pin ${shouldBePinned ? 'pinned' : ''}" onclick="togglePin('${chartId}')">
+                            ${shouldBePinned ? '📌' : '📍'}
+                        </button>
+                        <button class="chart-remove" onclick="removeChart('${chartId}')">×</button>
+                    </div>
+                </div>
+                <iframe class="chart-frame" src="${chartUrl}" allowfullscreen></iframe>
+            `;
+            
+            // Insert at the correct position to maintain visual order
+            if (insertPosition) {
+                chartsGrid.insertBefore(chartContainer, insertPosition);
+            } else {
+                chartsGrid.appendChild(chartContainer);
+            }
+            
+            console.log(`Chart added: ${symbol} at correct position`);
+            
+            // Apply responsive chart visibility after adding
+            updateChartVisibility();
+            prioritizeVisibleCharts();
+        }
+
+        // Update watchlist prices with live data
+        function updateWatchlistPrices() {
+            if (!wsConnected) return;
+            
+            const watchlistItems = document.querySelectorAll('.watchlist-item');
+            watchlistItems.forEach(item => {
+                const symbol = item.getAttribute('data-symbol');
+                const priceElement = item.querySelector('.watchlist-price');
+                
+                if (symbol && priceElement && marketCapData.has(symbol)) {
+                    const liveData = marketCapData.get(symbol);
+                    priceElement.textContent = liveData.price;
+                    priceElement.style.display = 'block';
+                    priceElement.style.color = '#56d364';
+                    setTimeout(() => {
+                        priceElement.style.color = '#58a6ff';
+                    }, 800);
+                }
+            });
+        }
+
+        // Hide watchlist prices when disconnected
+        function hideWatchlistPrices() {
+            const watchlistItems = document.querySelectorAll('.watchlist-item');
+            watchlistItems.forEach(item => {
+                const priceElement = item.querySelector('.watchlist-price');
+                if (priceElement) {
+                    priceElement.style.display = 'none';
+                    priceElement.textContent = 'Connect for live price';
+                }
+            });
+        }
+
+        // Update chart price pills with enhanced live data including MC
+        function updateChartPriceData() {
+            if (!wsConnected) return;
+            
+            document.querySelectorAll('.chart-container').forEach(chart => {
+                const titleElement = chart.querySelector('.chart-title');
+                const symbol = titleElement.textContent.trim();
+                
+                if (marketCapData.has(symbol)) {
+                    const liveData = marketCapData.get(symbol);
+                    const tokenData = tokenDatabase.find(t => t.symbol === symbol);
+                    
+                    // Update price
+                    const priceElement = chart.querySelector('.chart-price');
+                    if (priceElement) {
+                        priceElement.textContent = liveData.price;
+                        priceElement.style.color = '#56d364';
+                        setTimeout(() => {
+                            priceElement.style.color = '#c9d1d9';
+                        }, 800);
+                    }
+                    
+                    // Update market cap
+                    const mcElement = chart.querySelector('.chart-mc');
+                    if (mcElement) {
+                        mcElement.textContent = `MC: ${liveData.mcap}`;
+                    }
+                    
+                    // Update time pills
+                    const timePills = chart.querySelectorAll('.chart-time-pill');
+                    timePills.forEach(pill => {
+                        const text = pill.textContent;
+                        if (text.includes('1h:')) {
+                            const move1h = tokenData?.move1h || '+0.0%';
+                            pill.textContent = `1h: ${move1h}`;
+                            pill.className = `chart-time-pill ${move1h.startsWith('+') ? 'positive' : 'negative'}`;
+                        } else if (text.includes('6h:')) {
+                            const move6h = tokenData?.move6h || '+0.0%';
+                            pill.textContent = `6h: ${move6h}`;
+                            pill.className = `chart-time-pill ${move6h.startsWith('+') ? 'positive' : 'negative'}`;
+                        } else if (text.includes('24h:')) {
+                            pill.textContent = `24h: ${liveData.change}`;
+                            pill.className = `chart-time-pill ${liveData.change.startsWith('+') ? 'positive' : 'negative'}`;
+                        }
+                    });
+                }
+            });
+            
+            // Also update watchlist
+            updateWatchlistPrices();
+        }
+
+        // Toggle pin function - no notifications
+        function togglePin(chartId) {
+            const chart = document.getElementById(chartId);
+            const pinBtn = chart.querySelector('.chart-pin');
+            
+            if (pinnedCharts.has(chartId)) {
+                pinnedCharts.delete(chartId);
+                chart.classList.remove('pinned');
+                pinBtn.innerHTML = '📍';
+                pinBtn.classList.remove('pinned');
+            } else {
+                pinnedCharts.add(chartId);
+                chart.classList.add('pinned');
+                pinBtn.innerHTML = '📌';
+                pinBtn.classList.add('pinned');
+            }
+        }
+
+        // Remove chart function - no notifications
+        function removeChart(chartId) {
+            const chart = document.getElementById(chartId);
+            if (chart) {
+                chart.remove();
+                pinnedCharts.delete(chartId);
+                
+                // Clear selection if the removed chart was selected
+                if (selectedChart === chartId) {
+                    selectedChart = null;
+                }
+                
+                console.log(`Chart removed: ${chartId}`);
+                
+                // After removal, show hidden charts if space is available
+                updateChartVisibility();
+                prioritizeVisibleCharts();
+            }
+        }
+
+        // Responsive Chart Management
+        function getScreenTypeMessage(mode) {
+            switch (mode) {
+                case 'small': return 'Small mobile';
+                case 'mobile': return 'Mobile';
+                case 'tablet-small': return 'Small tablet';
+                case 'tablet': return 'Tablet';
+                case 'tablet-large': return 'Large tablet';
+                case 'desktop-small': return 'Small desktop';
+                case 'desktop-medium': return 'Desktop';
+                case 'desktop-large': return 'Large desktop';
+                default: return 'Screen';
+            }
+        }
+
+        function getResolutionMode() {
+            const width = window.innerWidth;
+            if (width <= 480) return 'small';
+            if (width <= 768) return 'mobile';
+            if (width <= 1000) return 'tablet-small';
+            if (width <= 1200) return 'tablet';
+            if (width <= 1400) return 'tablet-large';
+            if (width <= 1600) return 'desktop-small';
+            if (width <= 1800) return 'desktop-medium';
+            return 'desktop-large';
+        }
+
+        function getMaxChartsForResolution(mode = null) {
+            // If user has set a specific max, use that instead of auto resolution
+            if (userMaxCharts !== 'auto') {
+                return parseInt(userMaxCharts);
+            }
+            
+            // More sensitive responsive resolution-based limits
+            const resMode = mode || getResolutionMode();
+            switch (resMode) {
+                case 'small':
+                case 'mobile': return 1;
+                case 'tablet-small': return 2;
+                case 'tablet': return 2;
+                case 'tablet-large': return 3;
+                case 'desktop-small': return 3; // Changed from 4 to 3
+                case 'desktop-medium': return 6;
+                case 'desktop-large': return 6;
+                default: return 6;
+            }
+        }
+
+        function updateChartVisibility() {
+            const newMode = getResolutionMode();
+            const maxCharts = getMaxChartsForResolution(newMode);
+            
+            // If user has manually set a specific chart limit, always respect it
+            if (userMaxCharts !== 'auto') {
+                const allCharts = Array.from(document.querySelectorAll('.chart-container'));
+                const userLimit = parseInt(userMaxCharts);
+                
+                allCharts.forEach((chart, index) => {
+                    if (index < userLimit) {
+                        chart.style.display = '';
+                        hiddenCharts.delete(chart.id);
+                    } else {
+                        chart.style.display = 'none';
+                        hiddenCharts.add(chart.id);
+                    }
+                });
+                
+                console.log(`User override: showing ${userLimit} charts (user preference)`);
+                return; // Exit early, don't apply responsive logic
+            }
+            
+            // Only apply responsive logic when in "auto" mode
+            if (newMode !== currentResolutionMode) {
+                console.log(`Resolution changed from ${currentResolutionMode} to ${newMode}, showing max ${maxCharts} charts (auto mode)`);
+                currentResolutionMode = newMode;
+                
+                if (responsiveMode) {
+                    const allCharts = Array.from(document.querySelectorAll('.chart-container'));
+                    
+                    // Show/hide charts based on resolution
+                    allCharts.forEach((chart, index) => {
+                        if (index < maxCharts) {
+                            chart.style.display = '';
+                            hiddenCharts.delete(chart.id);
+                        } else {
+                            chart.style.display = 'none';
+                            hiddenCharts.add(chart.id);
+                        }
+                    });
+                    
+                    // Show more informative toast for screen size changes
+                    if (allCharts.length > maxCharts) {
+                        const hiddenCount = allCharts.length - maxCharts;
+                        const screenType = getScreenTypeMessage(newMode);
+                        showToast(`${screenType}: ${maxCharts} chart${maxCharts > 1 ? 's' : ''} visible, ${hiddenCount} hidden`, 'info');
+                    }
+                }
+            }
+        }
+
+        function prioritizeVisibleCharts() {
+            // If user has manually set a chart limit, respect it completely
+            if (userMaxCharts !== 'auto') {
+                const maxCharts = parseInt(userMaxCharts);
+                const allCharts = Array.from(document.querySelectorAll('.chart-container'));
+                
+                if (allCharts.length <= maxCharts) return;
+                
+                // Prioritize pinned charts first, then unpinned
+                const pinnedChartElements = allCharts.filter(chart => pinnedCharts.has(chart.id));
+                const unpinnedChartElements = allCharts.filter(chart => !pinnedCharts.has(chart.id));
+                
+                let visibleCount = 0;
+                
+                // Show pinned charts first
+                pinnedChartElements.forEach(chart => {
+                    if (visibleCount < maxCharts) {
+                        chart.style.display = '';
+                        hiddenCharts.delete(chart.id);
+                        visibleCount++;
+                    } else {
+                        chart.style.display = 'none';
+                        hiddenCharts.add(chart.id);
+                    }
+                });
+                
+                // Fill remaining slots with unpinned charts
+                unpinnedChartElements.forEach(chart => {
+                    if (visibleCount < maxCharts) {
+                        chart.style.display = '';
+                        hiddenCharts.delete(chart.id);
+                        visibleCount++;
+                    } else {
+                        chart.style.display = 'none';
+                        hiddenCharts.add(chart.id);
+                    }
+                });
+                return; // Exit early
+            }
+            
+            // Only apply responsive prioritization in auto mode
+            if (!responsiveMode) return;
+            
+            const maxCharts = getMaxChartsForResolution();
+            const allCharts = Array.from(document.querySelectorAll('.chart-container'));
+            
+            if (allCharts.length <= maxCharts) return;
+            
+            // Prioritize pinned charts first
+            const pinnedChartElements = allCharts.filter(chart => pinnedCharts.has(chart.id));
+            const unpinnedChartElements = allCharts.filter(chart => !pinnedCharts.has(chart.id));
+            
+            // Show pinned charts first
+            let visibleCount = 0;
+            pinnedChartElements.forEach(chart => {
+                if (visibleCount < maxCharts) {
+                    chart.style.display = '';
+                    hiddenCharts.delete(chart.id);
+                    visibleCount++;
+                } else {
+                    chart.style.display = 'none';
+                    hiddenCharts.add(chart.id);
+                }
+            });
+            
+            // Fill remaining slots with unpinned charts
+            unpinnedChartElements.forEach(chart => {
+                if (visibleCount < maxCharts) {
+                    chart.style.display = '';
+                    hiddenCharts.delete(chart.id);
+                    visibleCount++;
+                } else {
+                    chart.style.display = 'none';
+                    hiddenCharts.add(chart.id);
+                }
+            });
+        }
+
+        function showAllCharts() {
+            const allCharts = document.querySelectorAll('.chart-container');
+            allCharts.forEach(chart => {
+                chart.style.display = '';
+            });
+            hiddenCharts.clear();
+        }
+
+        // Enhanced window resize handler
+        function handleResize() {
+            updateChartVisibility();
+            prioritizeVisibleCharts();
+        }
+        
+        // Update max charts setting from dropdown
+        function updateMaxChartsSetting() {
+            const dropdown = document.getElementById('maxCharts');
+            if (dropdown) {
+                userMaxCharts = dropdown.value;
+                console.log(`Max charts setting changed to: ${userMaxCharts}`);
+                
+                // Immediately apply the new setting
+                updateChartVisibility();
+                prioritizeVisibleCharts();
+                
+                // Show feedback to user
+                const isMobile = window.innerWidth <= 768;
+                const currentCharts = document.querySelectorAll('.chart-container').length;
+                
+                if (userMaxCharts === 'auto') {
+                    const autoMax = getMaxChartsForResolution();
+                    const message = isMobile ? 
+                        `Auto mode: ${autoMax} chart${autoMax > 1 ? 's' : ''} for mobile` :
+                        'Auto chart limit enabled';
+                    showToast(message, 'success');
+                } else {
+                    const userLimit = parseInt(userMaxCharts);
+                    const visibleCount = Math.min(userLimit, currentCharts);
+                    const message = isMobile ? 
+                        `Mobile: ${visibleCount}/${currentCharts} charts shown (user limit: ${userLimit})` :
+                        `Chart limit set to ${userLimit}`;
+                    showToast(message, 'success');
+                }
+            }
+        }
+
+        // Mobile-specific chart navigation
+        function setupMobileChartNavigation() {
+            if (window.innerWidth > 768) return;
+            
+            const chartsGrid = document.getElementById('chartsGrid');
+            let startX = 0;
+            let startY = 0;
+            
+            chartsGrid.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            });
+            
+            chartsGrid.addEventListener('touchend', function(e) {
+                if (!startX || !startY) return;
+                
+                const endX = e.changedTouches[0].clientX;
+                const endY = e.changedTouches[0].clientY;
+                const diffX = startX - endX;
+                const diffY = startY - endY;
+                
+                // Only handle horizontal swipes
+                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                    const allCharts = Array.from(document.querySelectorAll('.chart-container'));
+                    const visibleCharts = allCharts.filter(chart => chart.style.display !== 'none');
+                    
+                    // Only enable swiping if there's more than 1 visible chart
+                    if (visibleCharts.length > 1) {
+                        // Find currently focused chart (or first visible one)
+                        let currentIndex = 0;
+                        const focusedChart = visibleCharts.find((chart, index) => {
+                            const rect = chart.getBoundingClientRect();
+                            const isInView = rect.top >= 0 && rect.bottom <= window.innerHeight;
+                            if (isInView) {
+                                currentIndex = index;
+                                return true;
+                            }
+                            return false;
+                        });
+                        
+                        let newIndex;
+                        if (diffX > 0) { // Swiped left - next chart
+                            newIndex = (currentIndex + 1) % visibleCharts.length;
+                        } else { // Swiped right - previous chart
+                            newIndex = currentIndex === 0 ? visibleCharts.length - 1 : currentIndex - 1;
+                        }
+                        
+                        // Scroll to the target chart
+                        const targetChart = visibleCharts[newIndex];
+                        if (targetChart) {
+                            targetChart.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'start',
+                                inline: 'nearest'
+                            });
+                            
+                            const newSymbol = targetChart.querySelector('.chart-title')?.textContent || 'Chart';
+                            showToast(`${newSymbol} (${newIndex + 1}/${visibleCharts.length})`, 'info');
+                        }
+                    } else if (allCharts.length > 1) {
+                        // Show message about hidden charts
+                        const hiddenCount = allCharts.length - visibleCharts.length;
+                        showToast(`${hiddenCount} chart${hiddenCount > 1 ? 's' : ''} hidden. Change chart limit in header.`, 'info');
+                    }
+                }
+                
+                startX = 0;
+                startY = 0;
+            });
+        }
+
+        // Enhanced mobile-friendly groups panel
+        function toggleGroupsPanel() {
+            const panel = document.getElementById('groupsPanel');
+            const isOpen = panel.classList.contains('open');
+            
+            if (isOpen) {
+                panel.classList.remove('open');
+                // Re-enable body scrolling on mobile
+                if (window.innerWidth <= 768) {
+                    document.body.style.overflow = '';
+                }
+            } else {
+                panel.classList.add('open');
+                // Prevent body scrolling on mobile when panel is open
+                if (window.innerWidth <= 768) {
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+        }
+
+        // Close groups panel when clicking outside on mobile
+        function setupMobileGroupsPanel() {
+            const panel = document.getElementById('groupsPanel');
+            
+            // Add overlay click handler for mobile
+            panel.addEventListener('click', function(e) {
+                if (e.target === panel && window.innerWidth <= 768) {
+                    toggleGroupsPanel();
+                }
+            });
+        }
+
+        function saveCurrentChartGroup() {
+            const groupNameInput = document.getElementById('groupNameInput');
+            const groupName = groupNameInput.value.trim();
+            
+            if (!groupName) {
+                showToast('Please enter a group name', 'error');
+                return;
+            }
+
+            const charts = [];
+            const chartContainers = document.querySelectorAll('.chart-container');
+            
+            chartContainers.forEach(container => {
+                const iframe = container.querySelector('.chart-frame');
+                const title = container.querySelector('.chart-title');
+                const isPinned = pinnedCharts.has(container.id);
+                
+                if (iframe && iframe.src && title && title.textContent) {
+                    charts.push({
+                        title: title.textContent.trim(),
+                        url: iframe.src,
+                        pinned: isPinned
+                    });
+                }
+            });
+
+            if (charts.length === 0) {
+                showToast('No charts to save', 'error');
+                return;
+            }
+
+            const newGroup = {
+                id: Date.now().toString(),
+                name: groupName,
+                charts: charts,
+                createdAt: new Date().toISOString(),
+                chartCount: charts.length
+            };
+
+            savedChartGroups.push(newGroup);
+            groupNameInput.value = '';
+            updateGroupsPanel();
+            showToast(`Chart group "${groupName}" saved!`, 'success');
+        }
+
+        function loadChartGroup(groupId) {
+            const group = savedChartGroups.find(g => g.id === groupId);
+            if (!group) return;
+
+            const chartsGrid = document.getElementById('chartsGrid');
+            chartsGrid.innerHTML = '';
+            pinnedCharts.clear();
+            selectedChart = null; // Clear any selection
+
+            group.charts.forEach((chart, index) => {
+                setTimeout(() => {
+                    const chartId = `chart-${Date.now()}-${index}`;
+                    
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = chart.pinned ? 'chart-container pinned' : 'chart-container';
+                    chartContainer.id = chartId;
+                    
+                    // Add click handler for selection
+                    chartContainer.addEventListener('click', function(e) {
+                        // Don't trigger selection if clicking on controls
+                        if (e.target.closest('.chart-controls')) {
+                            return;
+                        }
+                        selectChart(chartId);
+                    });
+                    
+                    chartContainer.innerHTML = `
+                        <div class="chart-header">
+                            <div class="chart-title-section">
+                                <div class="chart-price-data">
+                                    <span class="chart-title" style="margin-right: 8px;">${chart.title}</span>
+                                </div>
+                            </div>
+                            <div class="chart-controls">
+                                <button class="chart-pin ${chart.pinned ? 'pinned' : ''}" onclick="togglePin('${chartId}')">
+                                    ${chart.pinned ? '📌' : '📍'}
+                                </button>
+                                <button class="chart-remove" onclick="removeChart('${chartId}')">×</button>
+                            </div>
+                        </div>
+                        <iframe class="chart-frame" src="${chart.url}" allowfullscreen></iframe>
+                    `;
+                    
+                    if (chart.pinned) {
+                        pinnedCharts.add(chartId);
+                    }
+                    
+                    chartsGrid.appendChild(chartContainer);
+                }, index * 200);
+            });
+            
+            showToast(`Loaded chart group: ${group.name}`, 'success');
+            
+            // Apply responsive chart visibility after loading group
+            setTimeout(() => {
+                updateChartVisibility();
+                prioritizeVisibleCharts();
+            }, 100);
+        }
+
+        function deleteChartGroup(groupId) {
+            if (confirm('Are you sure you want to delete this chart group?')) {
+                savedChartGroups = savedChartGroups.filter(g => g.id !== groupId);
+                updateGroupsPanel();
+                showToast('Chart group deleted', 'success');
+            }
+        }
+
+        // Safe groups panel update
+        function updateGroupsPanel() {
+            try {
+                const savedGroupsDiv = document.getElementById('savedGroups');
+                
+                if (!savedGroupsDiv) {
+                    console.warn('savedGroups element not found');
+                    return;
+                }
+                
+                if (savedChartGroups.length === 0) {
+                    savedGroupsDiv.innerHTML = '<p style="color: #7d8590; text-align: center; padding: 20px; font-family: SF Mono, monospace;">No saved groups yet</p>';
+                    return;
+                }
+
+                const groupsHTML = savedChartGroups.map(group => `
+                    <div class="group-item">
+                        <div class="group-name">${group.name}</div>
+                        <div class="group-info">${group.chartCount} charts • ${new Date(group.createdAt).toLocaleDateString()}</div>
+                        <div class="group-actions-list">
+                            <button class="group-btn load" onclick="loadChartGroup('${group.id}')">Load</button>
+                            <button class="group-btn delete" onclick="deleteChartGroup('${group.id}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                savedGroupsDiv.innerHTML = `
+                    <h3 style="margin-bottom: 15px; color: #c9d1d9; font-family: SF Mono, monospace; font-size: 0.9rem;">Saved Groups (${savedChartGroups.length})</h3>
+                    ${groupsHTML}
+                `;
+                
+                console.log(`✅ Updated groups panel with ${savedChartGroups.length} groups`);
+            } catch (error) {
+                console.error('Error updating groups panel:', error);
+            }
+        }
+
+        function loadDefaultCharts() {
+            const chartsGrid = document.getElementById('chartsGrid');
+            chartsGrid.innerHTML = '';
+            pinnedCharts.clear();
+            selectedChart = null; // Clear any selection
+            
+            console.log('Loading 6 default charts...');
+            
+            // Load default 6 charts with proper spacing
+            defaultTokens.forEach((token, index) => {
+                setTimeout(() => {
+                    addTokenChart(token.symbol, token.name, 'N/A', 'N/A', token.address, token.chain, 'N/A', token.pairAddress, true);
+                }, index * 300); // Slightly longer delay to prevent overlaps
+            });
+            
+            setTimeout(() => {
+                const finalCount = chartsGrid.querySelectorAll('.chart-container').length;
+                console.log(`Default charts loaded: ${finalCount}/6`);
+                showToast(`Loaded ${finalCount} default charts`, 'success');
+                
+                // Apply responsive chart visibility after loading defaults
+                updateChartVisibility();
+                prioritizeVisibleCharts();
+            }, defaultTokens.length * 300 + 500);
+        }
+
+        function exportChartGroups() {
+            if (savedChartGroups.length === 0) {
+                showToast('No chart groups to export', 'error');
+                return;
+            }
+
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                chartGroups: savedChartGroups
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `dexscreener-chart-groups-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showToast(`Exported ${savedChartGroups.length} chart groups`, 'success');
+        }
+
+        function importChartGroups() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    if (!importData.chartGroups || !Array.isArray(importData.chartGroups)) {
+                        throw new Error('Invalid file format');
+                    }
+
+                    const confirmMsg = `Import ${importData.chartGroups.length} chart groups?\n\nThis will add to your existing groups.`;
+                    if (!confirm(confirmMsg)) {
+                        return;
+                    }
+
+                    // Add imported groups to existing ones
+                    importData.chartGroups.forEach(group => {
+                        group.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                        savedChartGroups.push(group);
+                    });
+
+                    updateGroupsPanel();
+                    showToast(`Imported ${importData.chartGroups.length} chart groups`, 'success');
+                    
+                } catch (error) {
+                    console.error('Import failed:', error);
+                    showToast('Failed to import chart groups. Invalid file format.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            
+            // Clear the input so the same file can be imported again
+            event.target.value = '';
+        }
+
+        // Calculate market cap (simplified)
+        function calculateMcap(price, symbol) {
+            const supplies = {
+                'BTC': 19700000,
+                'ETH': 120000000,
+                'PEPE': 420690000000000,
+                'SHIB': 589735030408323,
+                'UNI': 1000000000,
+                'LINK': 1000000000
+            };
+            
+            const supply = supplies[symbol] || 1000000000;
+            const mcap = parseFloat(price) * supply;
+            return formatMarketCap(mcap);
+        }
+
+        // Start market cap updates
+        function startMarketCapUpdates() {
+            if (marketCapInterval) clearInterval(marketCapInterval);
+            
+            marketCapInterval = setInterval(() => {
+                updateChartPriceData();
+            }, 10000); // Update every 10 seconds
+        }
+
+        // Toggle WebSocket connection
+        function toggleWebSocket() {
+            if (wsConnected) {
+                // Disconnect
+                if (ws) {
+                    ws.close();
+                }
+                wsConnected = false;
+                const statusElement = document.getElementById('connectionStatus');
+                const connectBtn = document.getElementById('connectBtn');
+                statusElement.innerHTML = '🔴 Disconnected';
+                statusElement.classList.remove('connected');
+                connectBtn.textContent = 'Connect Live Data';
+                
+                // Clear intervals
+                if (marketCapInterval) {
+                    clearInterval(marketCapInterval);
+                    marketCapInterval = null;
+                }
+                
+                // Hide watchlist prices
+                hideWatchlistPrices();
+                
+                console.log('🔌 Disconnected from live data');
+            } else {
+                // Connect
+                connectWebSocket();
+            }
+        }
+
+        // Connect WebSocket function - minimal notifications
+        function connectWebSocket() {
+            if (wsConnected) {
+                return; // Already connected, no notification needed
+            }
+            
+            const statusElement = document.getElementById('connectionStatus');
+            const connectBtn = document.getElementById('connectBtn');
+            
+            try {
+                // Connect to Binance WebSocket for live price data
+                ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
+                
+                ws.onopen = function(event) {
+                    console.log('✅ Binance WebSocket connected');
+                    wsConnected = true;
+                    statusElement.innerHTML = '🟢 Live';
+                    statusElement.classList.add('connected');
+                    connectBtn.textContent = 'Disconnect';
+                    showToast('Live data connected!', 'success', true);
+                    
+                    // Start market cap updates
+                    startMarketCapUpdates();
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        // Process live price data from Binance format
+                        if (Array.isArray(data)) {
+                            data.forEach(ticker => {
+                                if (ticker.s && ticker.c && ticker.P) {
+                                    const symbol = ticker.s.replace('USDT', '');
+                                    marketCapData.set(symbol, {
+                                        price: `${parseFloat(ticker.c).toLocaleString()}`,
+                                        change: `${parseFloat(ticker.P) >= 0 ? '+' : ''}${parseFloat(ticker.P).toFixed(2)}%`,
+                                        mcap: calculateMcap(ticker.c, symbol)
+                                    });
+                                }
+                            });
+                            updateChartPriceData();
+                        }
+                    } catch (error) {
+                        console.error('Error parsing Binance WebSocket data:', error);
+                    }
+                };
+
+                ws.onclose = function(event) {
+                    console.log('🔌 Binance WebSocket disconnected');
+                    wsConnected = false;
+                    statusElement.innerHTML = '🔴 Disconnected';
+                    statusElement.classList.remove('connected');
+                    connectBtn.textContent = 'Connect Live Data';
+                    
+                    // Clear live update intervals
+                    if (marketCapInterval) {
+                        clearInterval(marketCapInterval);
+                        marketCapInterval = null;
+                    }
+                    
+                    // Hide watchlist prices
+                    hideWatchlistPrices();
+                };
+
+                ws.onerror = function(error) {
+                    console.error('❌ Binance WebSocket error:', error);
+                    showToast('WebSocket connection failed', 'error', true);
+                };
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize Binance WebSocket:', error);
+                showToast('Failed to connect live data', 'error', true);
+            }
+        }
+
+        // Safe initialization with better error handling
+        window.addEventListener('load', function() {
+            console.log('🚀 Initializing DEXScreener Terminal with CoinGecko trending...');
+            
+            // Initialize responsive chart management
+            currentResolutionMode = getResolutionMode();
+            console.log(`Initial resolution mode: ${currentResolutionMode}`);
+            
+            // Add resize event listener for responsive chart management
+            window.addEventListener('resize', handleResize);
+            
+            try {
+                // Initialize search functionality with mobile optimizations
+                try {
+                    setupAdvancedSearch();
+                    console.log('✅ Search initialized with mobile support');
+                } catch (error) {
+                    console.error('Search initialization failed:', error);
+                }
+                
+                // Initialize mobile-specific features
+                try {
+                    setupMobileGroupsPanel();
+                    setupMobileChartNavigation();
+                    console.log('✅ Mobile features initialized');
+                } catch (error) {
+                    console.error('Mobile features initialization failed:', error);
+                }
+                
+                // Initialize groups panel
+                try {
+                    updateGroupsPanel();
+                    console.log('✅ Groups panel initialized');
+                } catch (error) {
+                    console.error('Groups panel initialization failed:', error);
+                }
+                
+                // Load trending data from CoinGecko immediately
+                try {
+                    loadTrendingData();
+                    console.log('✅ CoinGecko trending data loading initiated');
+                } catch (error) {
+                    console.error('CoinGecko trending data loading failed:', error);
+                }
+                
+                // Load default charts
+                try {
+                    setTimeout(() => {
+                        console.log('Loading default charts...');
+                        defaultTokens.forEach((token, index) => {
+                            setTimeout(() => {
+                                try {
+                                    addTokenChart(token.symbol, token.name, 'N/A', 'N/A', token.address, token.chain, 'N/A', token.pairAddress, true);
+                                } catch (error) {
+                                    console.error(`Failed to add chart for ${token.symbol}:`, error);
+                                }
+                            }, index * 200);
+                        });
+                    }, 500);
+                    console.log('✅ Chart loading initiated');
+                } catch (error) {
+                    console.error('Chart loading failed:', error);
+                }
+                
+                console.log('✅ Terminal initialization completed');
+                
+                // Auto-connect to live data
+                setTimeout(() => {
+                    connectWebSocket();
+                    console.log('🔗 Auto-connecting to live data...');
+                }, 1000);
+
+                // Start X.com mentions polling
+                setTimeout(() => {
+                    startXMentionsPolling();
+                }, 1500);
+                
+                // Simple welcome message after delay
+                setTimeout(() => {
+                    const isMobile = window.innerWidth <= 768;
+                    const currentMode = getResolutionMode();
+                    const screenType = getScreenTypeMessage(currentMode);
+                    const maxCharts = getMaxChartsForResolution(currentMode);
+                    
+                    const welcomeMsg = isMobile ? 
+                        '📱 Mobile terminal ready! Swipe charts horizontally.' : 
+                        `🎉 ${screenType} terminal ready! Auto mode shows ${maxCharts} charts.`;
+                    console.log(welcomeMsg);
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Terminal initialization failed:', error);
+            }
+        });
+
+        // Handle enter key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.activeElement.id === 'tokenSearch') {
+                const searchValue = document.getElementById('tokenSearch').value.trim();
+                if (searchValue && selectedToken) {
+                    addTokenChart(selectedToken.symbol, selectedToken.name, selectedToken.price, 
+                                selectedToken.change, selectedToken.address, selectedToken.chain, 
+                                selectedToken.mcap, selectedToken.pairAddress);
+                    document.getElementById('tokenSearch').value = '';
+                    selectedToken = null;
+                }
+            } else if (e.key === 'Enter' && document.activeElement.id === 'groupNameInput') {
+                saveCurrentChartGroup();
+            }
+        });
+
+        console.log('📜 Enhanced DEXScreener Terminal v1.0 with CoinGecko trending + mobile optimization loaded successfully');
+    </script>
+</body>
+</html>
+            
