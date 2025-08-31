@@ -64,7 +64,9 @@ const historicalData = new Map(); // Store historical mentions for trend calcula
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes (extended to save API calls)
 let rateLimitResetTime = 0; // Force reset on startup
 let requestCount = 0; // Force reset on startup
-const MAX_REQUESTS_PER_WINDOW = 25; // Even more conservative limit
+let lastRequestWindowStart = Date.now(); // Track when the current window started
+const MAX_REQUESTS_PER_WINDOW = 300; // X.com allows 300 requests per 15 minutes
+const WINDOW_DURATION = 15 * 60 * 1000; // 15 minutes window
 
 // Force clear any stuck rate limit state on startup
 console.log('🔄 Clearing rate limit state on startup');
@@ -103,6 +105,14 @@ app.get('/api/x-mentions', async (req, res) => {
     // Check rate limiting
     const now = Date.now();
     
+    // Reset the request count if we've started a new 15-minute window
+    if (now - lastRequestWindowStart >= WINDOW_DURATION) {
+      console.log('🔄 Starting new rate limit window - resetting request count');
+      requestCount = 0;
+      lastRequestWindowStart = now;
+      rateLimitResetTime = 0; // Clear any existing rate limit
+    }
+    
     // Force reset if more than 15 minutes have passed since rate limit was set
     if (rateLimitResetTime > 0 && now >= rateLimitResetTime) {
       console.log('🔄 Auto-resetting rate limit - cooldown period has passed');
@@ -110,7 +120,7 @@ app.get('/api/x-mentions', async (req, res) => {
       requestCount = 0;
     }
     
-    console.log(`🔍 Rate limit check: now=${now}, resetTime=${rateLimitResetTime}, requestCount=${requestCount}`);
+    console.log(`🔍 Rate limit check: now=${now}, resetTime=${rateLimitResetTime}, requestCount=${requestCount}, windowStart=${lastRequestWindowStart}`);
     
     if (now < rateLimitResetTime) {
       const resetTimeMinutes = Math.ceil((rateLimitResetTime - now) / (1000 * 60));
@@ -189,7 +199,7 @@ app.get('/api/x-mentions', async (req, res) => {
           console.log(`✅ ${symbol}: ${totalMentions} mentions (${trendData.trend} ${trendData.trendValue}%)`);
           
         } else if (response.status === 429) {
-          console.warn(`🚫 Rate limited on ${symbol}, setting cooldown`);
+          console.warn(`🚫 Rate limited by X.com API on ${symbol}, setting cooldown`);
           rateLimitResetTime = now + (15 * 60 * 1000); // 15 minute cooldown
           break; // Stop making requests - no more data for now
           
@@ -217,11 +227,7 @@ app.get('/api/x-mentions', async (req, res) => {
       timestamp: now
     });
 
-    // Reset request count and rate limit if cooldown period has passed
-    if (now >= rateLimitResetTime) {
-      requestCount = 0;
-      rateLimitResetTime = 0;
-    }
+    // No need for this additional reset logic anymore - handled by window logic above
 
     res.json({
       success: true,
@@ -371,6 +377,7 @@ function isDexScreenerListed(symbol) {
 app.post('/api/reset-rate-limit', (req, res) => {
   rateLimitResetTime = 0;
   requestCount = 0;
+  lastRequestWindowStart = Date.now();
   mentionsCache.clear();
   console.log('🔄 Rate limit manually reset');
   res.json({
@@ -378,6 +385,7 @@ app.post('/api/reset-rate-limit', (req, res) => {
     message: 'Rate limit reset',
     rateLimitResetTime: rateLimitResetTime,
     requestCount: requestCount,
+    windowStart: lastRequestWindowStart,
     timestamp: new Date().toISOString()
   });
 });
